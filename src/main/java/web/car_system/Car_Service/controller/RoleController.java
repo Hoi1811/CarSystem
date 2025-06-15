@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import web.car_system.Car_Service.constant.Endpoint;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
@@ -15,13 +16,12 @@ import web.car_system.Car_Service.service.RoleService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/roles")
 @RequiredArgsConstructor
 public class RoleController {
     private final RoleService roleService;
 
     // Tạo role mới
-    @PostMapping
+    @PostMapping(Endpoint.V1.ROLE.ROLE)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RoleResponseDTO>> createRole(
             @RequestBody @Valid RoleRequestDTO request) {
         GlobalResponseDTO<NoPaginatedMeta, RoleResponseDTO> response = roleService.createRole(request);
@@ -32,7 +32,7 @@ public class RoleController {
     }
 
     // Lấy thông tin role bằng ID
-    @GetMapping("/{roleId}")
+    @GetMapping(Endpoint.V1.ROLE.ROLE_ID)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RoleResponseDTO>> getRoleById(
             @PathVariable Long roleId) {
         GlobalResponseDTO<NoPaginatedMeta, RoleResponseDTO> response = roleService.getRoleById(roleId);
@@ -43,7 +43,7 @@ public class RoleController {
     }
 
     // Lấy danh sách tất cả roles (phân trang)
-    @GetMapping
+    @GetMapping(Endpoint.V1.ROLE.ROLE)
     public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<RoleResponseDTO>>> getAllRoles(
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "0") int pageIndex,
@@ -56,7 +56,7 @@ public class RoleController {
     }
 
     // Cập nhật role
-    @PutMapping("/{roleId}")
+    @PutMapping(Endpoint.V1.ROLE.ROLE_ID)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RoleResponseDTO>> updateRole(
             @PathVariable Long roleId,
             @RequestBody @Valid RoleRequestDTO request) {
@@ -68,7 +68,7 @@ public class RoleController {
     }
 
     // Xóa role
-    @DeleteMapping("/{roleId}")
+    @DeleteMapping(Endpoint.V1.ROLE.ROLE_ID)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteRole(@PathVariable Long roleId) {
         GlobalResponseDTO<NoPaginatedMeta, Void> response = roleService.deleteRole(roleId);
         if (response.meta().status() == Status.SUCCESS) {
@@ -78,7 +78,7 @@ public class RoleController {
     }
 
     // Thêm permission vào role
-    @PostMapping("/{roleId}/permissions")
+    @PostMapping(Endpoint.V1.ROLE.ROLE_PERMISSIONS)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RoleResponseDTO>> addPermissionToRole(
             @PathVariable Long roleId,
             @RequestParam String permissionName) {
@@ -90,7 +90,7 @@ public class RoleController {
     }
 
     // Xóa permission khỏi role
-    @DeleteMapping("/{roleId}/permissions")
+    @DeleteMapping(Endpoint.V1.ROLE.ROLE_PERMISSIONS)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RoleResponseDTO>> removePermissionFromRole(
             @PathVariable Long roleId,
             @RequestParam String permissionName) {
