@@ -54,7 +54,7 @@ public class UserController {
     }
 
     @GetMapping(Endpoint.V1.USER.USER_AUTHORITIES) // Full path /api/v1/users/{userId}/authorities
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, UserAuthoritiesDTO>> getUserAuthorities(@PathVariable Long userId) {
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, UserAuthoritiesDTO>> getUserAuthorities(@PathVariable("userId") Long userId) {
         GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> userResponse = userService.getUserById(userId);
         if (userResponse.meta().status() == Status.ERROR) {
             return ResponseEntity.status(404).body(GlobalResponseDTO.<NoPaginatedMeta, UserAuthoritiesDTO>builder()
@@ -86,7 +86,7 @@ public class UserController {
 
     @GetMapping(Endpoint.V1.USER.USER_ID) // Full path /api/v1/users/{userId}
     @PreAuthorize("hasAuthority('READ')")
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO>> getUserById(@PathVariable Long userId) {
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO>> getUserById(@PathVariable("userId") Long userId) {
         GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> response = userService.getUserById(userId);
         if (response.meta().status() == Status.SUCCESS) {
             return ResponseEntity.ok(response);
@@ -108,7 +108,7 @@ public class UserController {
 
     @DeleteMapping(Endpoint.V1.USER.USER_ID) // Full path /api/v1/users/{userId}
     @PreAuthorize("hasAuthority('DELETE')")
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteUser(@PathVariable("userId") Long userId) {
         GlobalResponseDTO<NoPaginatedMeta, Void> response = userService.deleteUser(userId);
         if (response.meta().status() == Status.SUCCESS) {
             return ResponseEntity.noContent().build();
@@ -119,7 +119,7 @@ public class UserController {
     @PostMapping(Endpoint.V1.USER.USER_ROLES) // Full path /api/v1/users/{userId}/roles
     @PreAuthorize("hasAuthority('UPDATE')")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> addRole(
-            @PathVariable Long userId,
+            @PathVariable("userId") Long userId,
             @RequestParam String roleName) {
         GlobalResponseDTO<NoPaginatedMeta, Void> response = userService.addRoleToUser(userId, roleName);
         if (response.meta().status() == Status.SUCCESS) {
@@ -131,7 +131,7 @@ public class UserController {
     @DeleteMapping(Endpoint.V1.USER.USER_ROLES) // Full path /api/v1/users/{userId}/roles
     @PreAuthorize("hasAuthority('UPDATE')")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> removeRole(
-            @PathVariable Long userId,
+            @PathVariable("userId") Long userId,
             @RequestParam String roleName) {
         GlobalResponseDTO<NoPaginatedMeta, Void> response = userService.removeRoleFromUser(userId, roleName);
         if (response.meta().status() == Status.SUCCESS) {
@@ -142,7 +142,7 @@ public class UserController {
 
     @GetMapping(Endpoint.V1.USER.USER_ROLES) // Full path /api/v1/users/{userId}/roles
     @PreAuthorize("hasAuthority('READ')")
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Set<Role>>> getUserRoles(@PathVariable Long userId) {
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Set<Role>>> getUserRoles(@PathVariable("userId") Long userId) {
         GlobalResponseDTO<NoPaginatedMeta, Set<Role>> response = userService.getUserRoles(userId);
         if (response.meta().status() == Status.SUCCESS) {
             return ResponseEntity.ok(response);
@@ -153,7 +153,7 @@ public class UserController {
     @PostMapping(Endpoint.V1.USER.USER_ROLES + "/bulk") // Full path /api/v1/users/{userId}/roles/bulk
     @PreAuthorize("hasAuthority('UPDATE')")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> assignRoles(
-            @PathVariable Long userId,
+            @PathVariable("userId") Long userId,
             @RequestBody List<String> roleNames) {
         GlobalResponseDTO<NoPaginatedMeta, Void> response = userService.assignRolesToUser(userId, roleNames);
         if (response.meta().status() == Status.SUCCESS) {
