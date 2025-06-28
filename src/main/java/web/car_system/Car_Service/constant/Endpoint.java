@@ -63,15 +63,23 @@ public class Endpoint {
         public static final class USER{
             public static final String USER = PREFIX + "/users";
             public static final String ME = USER + "/me";
-            public static final String USER_ID = USER + "/{id}";
-            public static final String USER_AUTHORITIES = USER + "/{id}/authorities";
-            public static final String USER_ROLES = USER + "/{id}/roles";
-            public static final String USER_PERMISSIONS = USER + "/{id}/permissions";
+            public static final String USER_ID = USER + "/{userId}";
+            public static final String USER_AUTHORITIES = USER + "/{userId}/authorities";
+            public static final String USER_ROLES = USER + "/{userId}/roles";
+            public static final String USER_PERMISSIONS = USER + "/{userId}/permissions";
         }
         public static final class CHATBOT{
             public static final String PREFIX = V1.PREFIX + "/chatbot";
             public static final String CHAT = PREFIX + "/query";
-
+        }
+        public static final class ROLE {
+            public static final String ROLE = PREFIX + "/roles";
+            public static final String ROLE_ID = ROLE + "/{roleId}";
+            public static final String ROLE_PERMISSIONS = ROLE_ID + "/permissions";
+        }
+        public static final class PERMISSION {
+            public static final String PERMISSION = PREFIX + "/permissions";
+            public static final String PERMISSION_ID = PERMISSION + "/{permissionId}";
         }
     }
 }

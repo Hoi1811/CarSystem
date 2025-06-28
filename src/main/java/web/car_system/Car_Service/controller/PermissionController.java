@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import web.car_system.Car_Service.constant.Endpoint;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
@@ -15,13 +16,12 @@ import web.car_system.Car_Service.service.PermissionService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/permissions")
 @RequiredArgsConstructor
 public class PermissionController {
     private final PermissionService permissionService;
 
     // Tạo permission mới
-    @PostMapping
+    @PostMapping(Endpoint.V1.PERMISSION.PERMISSION)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, PermissionResponseDTO>> createPermission(
             @RequestBody @Valid PermissionRequestDTO request) {
         GlobalResponseDTO<NoPaginatedMeta, PermissionResponseDTO> response = permissionService.createPermission(request);
@@ -32,7 +32,7 @@ public class PermissionController {
     }
 
     // Lấy thông tin permission bằng ID
-    @GetMapping("/{permissionId}")
+    @GetMapping(Endpoint.V1.PERMISSION.PERMISSION_ID)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, PermissionResponseDTO>> getPermissionById(
             @PathVariable Long permissionId) {
         GlobalResponseDTO<NoPaginatedMeta, PermissionResponseDTO> response = permissionService.getPermissionById(permissionId);
@@ -43,7 +43,7 @@ public class PermissionController {
     }
 
     // Lấy danh sách tất cả permissions (phân trang)
-    @GetMapping
+    @GetMapping(Endpoint.V1.PERMISSION.PERMISSION)
     public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<PermissionResponseDTO>>> getAllPermissions(
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "0") int pageIndex,
@@ -56,7 +56,7 @@ public class PermissionController {
     }
 
     // Cập nhật permission
-    @PutMapping("/{permissionId}")
+    @PutMapping(Endpoint.V1.PERMISSION.PERMISSION_ID)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, PermissionResponseDTO>> updatePermission(
             @PathVariable Long permissionId,
             @RequestBody @Valid PermissionRequestDTO request) {
@@ -68,7 +68,7 @@ public class PermissionController {
     }
 
     // Xóa permission
-    @DeleteMapping("/{permissionId}")
+    @DeleteMapping(Endpoint.V1.PERMISSION.PERMISSION_ID)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deletePermission(@PathVariable Long permissionId) {
         GlobalResponseDTO<NoPaginatedMeta, Void> response = permissionService.deletePermission(permissionId);
         if (response.meta().status() == Status.SUCCESS) {
