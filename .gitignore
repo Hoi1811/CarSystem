@@ -31,3 +31,20 @@ build/
 
 ### VS Code ###
 .vscode/
+
+
+
+# Bỏ qua các tệp cấu hình khác (nếu cần)
+application.properties
+*.properties
+**/application.yml
+
+**/application.properties
+
+**/.env
+**/.env.*
+**/.env.local
+**/.env.development
+**/.env.production
+
+**/.pem
