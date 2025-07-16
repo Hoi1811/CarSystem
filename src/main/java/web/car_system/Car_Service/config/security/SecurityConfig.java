@@ -106,7 +106,9 @@ public class SecurityConfig {
             "http://localhost:1234",
             "http://localhost:4200",
             "https://just-a-normal-dev.id.vn",
-            "https://be.just-a-normal-dev.id.vn"
+            "https://be.just-a-normal-dev.id.vn",
+            "http://10.2.0.78:4200",
+            "http://10.1.8.15:4200"
     );
     private final List<String> ALLOWED_HTTP_METHODS = List.of(
             GET.toString(),

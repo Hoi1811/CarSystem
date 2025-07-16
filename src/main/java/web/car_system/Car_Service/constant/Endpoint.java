@@ -81,5 +81,12 @@ public class Endpoint {
             public static final String PERMISSION = PREFIX + "/permissions";
             public static final String PERMISSION_ID = PERMISSION + "/{permissionId}";
         }
+
+        public static final class AUDIT {
+            public static final String AUDIT = PREFIX + "/audits";
+            public static final String CAR_AUDIT_HISTORY = AUDIT + "/cars/{id}";
+            public static final String CAR_AT_REVISION = AUDIT + "/cars/{id}/revision/{revisionNumber}";
+
+        }
     }
 }

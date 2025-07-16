@@ -5,12 +5,14 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.hibernate.envers.Audited;
 
 import java.util.List;
 
 @Entity
 @Table(name = "specifications")
 @Data
+@Audited
 public class Specification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

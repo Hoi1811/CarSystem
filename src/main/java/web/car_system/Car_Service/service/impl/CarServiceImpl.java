@@ -41,6 +41,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import java.util.stream.Collectors;
 
 @Service
@@ -257,60 +261,25 @@ public class CarServiceImpl implements CarService {
         }
 
 
-        car.setImages(new ArrayList<>()); // Khởi tạo danh sách images
-        car = carRepository.save(car);
-        // Base URL từ Cloudinary (có thể đưa vào application.properties)
+        // 2. Lưu xe lần đầu để lấy ID
+        car.setImages(new ArrayList<>()); // Khởi tạo danh sách trống
+        Car savedCar = carRepository.save(car);
 
+        // 3. Xử lý Upload ảnh và Thumbnail (phần được tối ưu)
         if (carRequest.images() != null && !carRequest.images().isEmpty()) {
-            List<Image> uploadedImages = new ArrayList<>();
+            // Upload đồng thời
+            List<Image> uploadedImages = uploadImagesConcurrently(savedCar, carRequest.images());
+
+            // Thiết lập thumbnail từ kết quả đã upload
             int thumbnailIndex = carRequest.thumbnailIndex() != null ? carRequest.thumbnailIndex() : 0;
-
-            for (int i = 0; i < carRequest.images().size(); i++) {
-                MultipartFile file = carRequest.images().get(i);
-
-                if (file.isEmpty()) {
-                    throw new IllegalArgumentException("One or more files are empty");
-                }
-                if (file.getSize() > MAX_FILE_SIZE) {
-                    throw new IllegalArgumentException("File size exceeds 20MB limit: " + file.getOriginalFilename());
-                }
-                String contentType = file.getContentType();
-                if (!ALLOWED_TYPES.contains(contentType)) {
-                    throw new IllegalArgumentException("Only JPEG, PNG, GIF files are allowed: " + file.getOriginalFilename());
-                }
-                BufferedImage imageCheck = ImageIO.read(file.getInputStream());
-                if (imageCheck == null) {
-                    throw new IllegalArgumentException("Invalid image file: " + file.getOriginalFilename());
-                }
-
-                String fileHash = calculateFileHash(file);
-                String publicId = "car_" + car.getCarId() + "_" + System.currentTimeMillis(); // Tạo public_id một lần
-                String fileName = publicId; // Đồng bộ fileName với public_id
-                Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                        "public_id", publicId, // Dùng cùng public_id
-                        "folder", "car_images",
-                        "transformation", Arrays.asList(
-                                // Chuyển đổi kích thước và thêm padding
-                                Map.of("width", TARGET_WIDTH),
-                                Map.of("height", TARGET_HEIGHT),
-                                Map.of("crop", "pad"),
-                                Map.of("background", "black")
-                        )
-                ));
-                String imageUrl = (String) uploadResult.get("public_id");
-                Image image = new Image();
-                image.setCar(car);
-                image.setUrl(imageUrl); // Lưu tên file đồng bộ
-                image.setFileHash(fileHash);
-                if (i == thumbnailIndex) {
-                    car.setThumbnail(imageUrl); // Lưu tên file đồng bộ
-                }
-                uploadedImages.add(image);
+            if (thumbnailIndex >= 0 && thumbnailIndex < uploadedImages.size()) {
+                savedCar.setThumbnail(uploadedImages.get(thumbnailIndex).getUrl());
             }
 
-            imageRepository.saveAll(uploadedImages);
-            car.setImages(uploadedImages);
-            carRepository.save(car);
+            // Gắn danh sách ảnh đã upload vào xe và lưu lại
+            savedCar.setImages(uploadedImages);
+            // Quan trọng: Lưu lại Car để cập nhật thumbnail và quan hệ với Image
+            carRepository.save(savedCar);
         }
         Map<String, Specification> specMap = carDataCache.getSpecificationMap();
         Map<String, Attribute> attrMap = carDataCache.getAttributeMap();
@@ -346,6 +315,95 @@ public class CarServiceImpl implements CarService {
         Car updatedCar = carRepository.findById(car.getCarId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found"));
         return CarMapper.INSTANCE.toCarDetailsResponse(updatedCar);
+    }
+    private List<Image> uploadImagesConcurrently(Car car, List<MultipartFile> files) throws Exception {
+        // 1. Tạo một ExecutorService đặc biệt: Mỗi tác vụ sẽ được gán một Virtual Thread mới.
+        // Dùng try-with-resources để đảm bảo executor được shutdown đúng cách.
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+
+            // 2. Gửi tất cả các tác vụ upload vào executor.
+            // Mỗi lời gọi `submit` sẽ trả về một `Future` ngay lập tức.
+            List<Future<Image>> imageFutures = new ArrayList<>();
+            for (MultipartFile file : files) {
+                Future<Image> future = executor.submit(() -> {
+                    // Logic xử lý một file, y hệt như trước đây.
+                    // Lời gọi blocking `cloudinary.uploader().upload` sẽ không làm tốn Platform Thread.
+
+                    System.out.println("Uploading: " + file.getOriginalFilename() + " on " + Thread.currentThread());
+
+                    validateFile(file);
+
+                    String publicId = "car_" + car.getCarId() + "_" + System.currentTimeMillis();
+                    Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                            "public_id", publicId,
+                            "folder", "car_images",
+                            "transformation", Arrays.asList(
+                                    // Chuyển đổi kích thước và thêm padding
+                                    Map.of("width", TARGET_WIDTH),
+                                    Map.of("height", TARGET_HEIGHT),
+                                    Map.of("crop", "pad"),
+                                    Map.of("background", "black")
+                            )
+                    ));
+
+                    String imageUrl = (String) uploadResult.get("public_id");
+                    Image image = new Image();
+                    image.setCar(car);
+                    image.setUrl(imageUrl);
+                    image.setFileHash(calculateFileHash(file));
+
+                    return image;
+                });
+                imageFutures.add(future);
+            }
+
+            // 3. Thu thập kết quả từ các Future.
+            // Đây là điểm khác biệt chính so với StructuredTaskScope.
+            List<Image> results = new ArrayList<>();
+            for (Future<Image> future : imageFutures) {
+                try {
+                    // future.get() là một lời gọi blocking.
+                    // Nó sẽ đợi cho đến khi tác vụ upload hoàn thành và trả về kết quả.
+                    // Nếu tác vụ ném ra Exception, future.get() sẽ ném lại Exception đó.
+                    results.add(future.get());
+                } catch (Exception e) {
+                    // Nếu một tác vụ bị lỗi, chúng ta cần phải xử lý nó.
+                    // Một cách tiếp cận đơn giản là hủy bỏ tất cả các tác vụ còn lại và ném ra lỗi.
+                    System.err.println("Một lỗi upload đã xảy ra, hủy các tác vụ khác. Lỗi: " + e.getCause().getMessage());
+
+                    // Hủy các future chưa hoàn thành
+                    for (Future<Image> f : imageFutures) {
+                        if (!f.isDone()) {
+                            f.cancel(true); // Gửi yêu cầu ngắt (interrupt)
+                        }
+                    }
+
+                    // Ném lại exception để transaction có thể rollback
+                    throw new RuntimeException("Lỗi trong quá trình upload song song: " + e.getCause().getMessage(), e);
+                }
+            }
+
+            // Lưu tất cả vào DB sau khi mọi thứ thành công
+            return imageRepository.saveAll(results);
+
+        } // executor.close() sẽ được gọi tự động ở đây
+    }
+    private void validateFile(MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File không được rỗng: " + file.getOriginalFilename());
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("Kích thước file vượt quá 20MB: " + file.getOriginalFilename());
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException("Chỉ cho phép file JPEG, PNG, GIF: " + file.getOriginalFilename());
+        }
+        // Validate image content
+        BufferedImage imageCheck = ImageIO.read(file.getInputStream());
+        if (imageCheck == null) {
+            throw new IllegalArgumentException("File không phải là file ảnh hợp lệ: " + file.getOriginalFilename());
+        }
     }
 
     @Override

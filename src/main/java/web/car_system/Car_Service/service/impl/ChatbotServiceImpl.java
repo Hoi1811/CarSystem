@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.service.impl;
+
 import autovalue.shaded.com.google.common.collect.ImmutableList;
-import com.google.genai.AsyncChat;
+import com.google.genai.Chat;
 import com.google.genai.Client;
 import com.google.genai.types.*;
 import com.vladsch.flexmark.util.ast.Node;
@@ -19,9 +20,11 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+
 import com.vladsch.flexmark.html.HtmlRenderer; // Import
 import com.vladsch.flexmark.parser.Parser;     // Import
 import com.vladsch.flexmark.util.data.MutableDataSet; // Import
+
 @Service
 public class ChatbotServiceImpl implements ChatbotService {
     private final String DEFAULT_SYSTEM_INSTRUCTION = "Bạn là một trợ lý AI chuyên về dịch vụ xe hơi. Hãy trả lời ngắn gọn, lịch sự, đưa ra ý chính và chỉ cung cấp thông tin liên quan đến xe hơi, dịch vụ sửa chữa, hoặc bảo trì. Nếu không biết câu trả lời, hãy nói 'Tôi không có thông tin về vấn đề này, vui lòng liên hệ trung tâm dịch vụ.'";
@@ -49,7 +52,7 @@ public class ChatbotServiceImpl implements ChatbotService {
     // Quản lý các phiên chat bất đồng bộ
 
 
-    private final Map<String, AsyncChat> activeChatSessions = new ConcurrentHashMap<>();
+    private final Map<String, Chat> activeChatSessions = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -57,40 +60,38 @@ public class ChatbotServiceImpl implements ChatbotService {
     }
 
     @Override
-    public Mono<GlobalResponseDTO<NoPaginatedMeta, ChatResponseDTO>> getAiReply(ChatRequestDTO chatRequestDTO) {
+    public GlobalResponseDTO<NoPaginatedMeta, ChatResponseDTO> getAiReply(ChatRequestDTO chatRequestDTO) {
         if (this.geminiClient == null) {
-            return Mono.just(createErrorResponse(AI_NOT_AVAILABLE));
+            return createErrorResponse(AI_NOT_AVAILABLE);
         }
-        Content systemInstruction = Content.fromParts(Part.fromText(DEFAULT_SYSTEM_INSTRUCTION));
-        // Tạo cấu hình với system instruction
-        GenerateContentConfig config = createGenerateContentConfig(systemInstruction);
-        // Lấy hoặc tạo phiên chat
-        AsyncChat chatSession = activeChatSessions.computeIfAbsent(chatRequestDTO.sessionId(), key ->
-                        this.geminiClient.async.chats.create(MODEL_NAME, config)
-                // Bạn có thể thêm system instructions hoặc history ở đây nếu muốn
-        );
+        try {
+            Content systemInstruction = Content.fromParts(Part.fromText(DEFAULT_SYSTEM_INSTRUCTION));
+            // Tạo cấu hình với system instruction
+            GenerateContentConfig config = createGenerateContentConfig(systemInstruction);
+            // Lấy hoặc tạo phiên chat
+            Chat chatSession = activeChatSessions.computeIfAbsent(chatRequestDTO.sessionId(), key ->
+                    this.geminiClient.chats.create(MODEL_NAME, config)
+            );
 
-        // Gửi tin nhắn và nhận về một CompletableFuture
-        CompletableFuture<GenerateContentResponse> responseFuture = chatSession.sendMessage(chatRequestDTO.message(), config);
+            // Lời gọi này là BLOCKING.
+            // Nhưng vì nó đang chạy trên một Virtual Thread, thread "thật" của hệ điều hành
+            // đã được giải phóng để đi xử lý request khác.
+            GenerateContentResponse response = chatSession.sendMessage(chatRequestDTO.message(), config);
 
-        // Chuyển đổi CompletableFuture thành Mono của WebFlux
-        return Mono.fromFuture(responseFuture)
-                .map(response -> {
-                    // Khi Future hoàn thành thành công
-                    String aiReplyText = response.text();
-                    // === CHUYỂN ĐỔI MARKDOWN SANG HTML Ở ĐÂY ===
-                    String formattedReply = convertMarkdownToHtml(aiReplyText);
-                    ChatResponseDTO responseData = new ChatResponseDTO(formattedReply);
-                    return createSuccessResponse(responseData);
-                })
-                .onErrorResume(error -> {
-                    // Khi Future hoàn thành với lỗi
-                    return Mono.just(createErrorResponse(ERROR_MESSAGE));
-                })
-                .timeout(Duration.ofSeconds(15));
+            // Code tuần tự, dễ đọc
+            String aiReplyText = response.text();
+            String formattedReply = convertMarkdownToHtml(aiReplyText);
+            ChatResponseDTO responseData = new ChatResponseDTO(formattedReply);
 
+            return createSuccessResponse(responseData);
 
+        } catch (Exception e) {
+            // Bắt lỗi một cách thông thường bằng try-catch
+            return createErrorResponse(ERROR_MESSAGE);
+        }
     }
+
+
     // Hàm helper để tạo response thành công
     private GlobalResponseDTO<NoPaginatedMeta, ChatResponseDTO> createSuccessResponse(ChatResponseDTO data) {
         return GlobalResponseDTO.<NoPaginatedMeta, ChatResponseDTO>builder()
@@ -105,6 +106,7 @@ public class ChatbotServiceImpl implements ChatbotService {
                 .meta(NoPaginatedMeta.builder().status(Status.ERROR).message(message).build())
                 .build();
     }
+
     /**
      * Chuyển đổi văn bản Markdown thành HTML an toàn.
      * @param markdownText Văn bản Markdown từ AI.

@@ -169,7 +169,6 @@ public class AuthServiceImpl implements AuthService {
                     newUser.setFullName(fullName);
                     newUser.setUsername(externalId);
                     newUser.setPicture(picture);
-                    newUser.setCreatedAt(LocalDateTime.now());
                     return newUser;
                 });
         User savedUser = userRepository.save(user);
@@ -188,7 +187,6 @@ public class AuthServiceImpl implements AuthService {
             user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));
             user.setEmail(email);
-            user.setCreatedAt(LocalDateTime.now());
             User savedUser = userRepository.save(user);
             userService.addRoleToUser(savedUser.getUserId(), "ROLE_USER");
             NoPaginatedMeta meta = NoPaginatedMeta.builder()
@@ -218,7 +216,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.isDeleted()) {
+        if (user.getDeletedAt() != null) {
             throw new RuntimeException("User account is deleted");
         }
 

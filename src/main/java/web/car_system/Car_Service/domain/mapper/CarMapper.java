@@ -30,7 +30,6 @@ public interface CarMapper {
     @Mapping(target = "carId", ignore = true) // ID sinh tự động
     @Mapping(target = "carAttributes", ignore = true) // Xử lý riêng trong service
     @Mapping(target = "carTypes", ignore = true) // Không dùng trong JSON
-    @Mapping(target = "createdAt", ignore = true) // Sinh tự động bởi database
     @Mapping(target = "thumbnail", ignore = true)
     @Mapping(target = "carSegment", ignore = true)
     @Mapping(target = "manufacturer", ignore = true)
@@ -40,7 +39,6 @@ public interface CarMapper {
     @Mapping(target = "carId", ignore = true) // ID sinh tự động
     @Mapping(target = "carAttributes", ignore = true) // Xử lý riêng trong service
     @Mapping(target = "carTypes", ignore = true) // Không dùng trong JSON
-    @Mapping(target = "createdAt", ignore = true) // Sinh tự động bởi database
     @Mapping(target = "thumbnail", ignore = true)
     @Mapping(target = "carSegment", ignore = true)
     @Mapping(target = "manufacturer", ignore = true)

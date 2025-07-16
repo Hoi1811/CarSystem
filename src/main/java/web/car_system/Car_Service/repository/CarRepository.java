@@ -1,5 +1,6 @@
 package web.car_system.Car_Service.repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -8,8 +9,18 @@ import web.car_system.Car_Service.domain.dto.projection.OptionProjection;
 import web.car_system.Car_Service.domain.entity.Car;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CarRepository extends JpaRepository<Car, Integer>, JpaSpecificationExecutor<Car> {
+    // Sử dụng @EntityGraph để định nghĩa việc fetch
+    @EntityGraph(attributePaths = {"carAttributes", "carAttributes.attribute"})
+    Optional<Car> findById(Integer id);
+
+    @Query("SELECT c FROM Car c " +
+            "LEFT JOIN FETCH c.carAttributes ca " +
+            "LEFT JOIN FETCH ca.attribute " +
+            "WHERE c.carId = :id")
+    Optional<Car> findByIdWithDetails(@Param("id") Integer id);
 
     List<Car> findAllByName(String name);
 
