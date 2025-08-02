@@ -21,14 +21,20 @@ public class SpecificationController {
 
     private final SpecificationService specificationService;
 
-    @GetMapping(Endpoint.V1.CAR.SPECIFICATIONS)
-    public GlobalResponseDTO<NoPaginatedMeta, ?> getAllSpecifications(
-          ) {
-        return specificationService.findAllSpecificationsWithLimitedAttributes();
-    }
     @PostMapping(Endpoint.V1.CAR.SPECIFICATION_ATTRIBUTES)
     public GlobalResponseDTO<PaginatedMeta, List<AttributeOnlyResponseDTO>> getAttributesBySpecificationId(
             @Valid @RequestBody AttributeSearchRequestDTO request) {
         return specificationService.getAttributesBySpecificationId(request);
+    }
+
+    @GetMapping(Endpoint.V1.CAR.SPECIFICATIONS)
+    public GlobalResponseDTO<NoPaginatedMeta, ?> getAllSpecifications() {
+        return specificationService.findAllSpecificationsWithLimitedAttributes();
+    }
+
+    // --- ENDPOINT MỚI ĐỂ LẤY SCHEMA CHO FORM ---
+    @GetMapping(Endpoint.V1.CAR.SPECIFICATIONS_SCHEMA)
+    public GlobalResponseDTO<NoPaginatedMeta, ?> getSpecificationsFormSchema() {
+        return specificationService.getFormSchema();
     }
 }

@@ -66,7 +66,7 @@ public class SpecificationServiceImpl implements SpecificationService {
                     new SpecificationOnlyResponseDTO(id, specName, new ArrayList<>()));
 
             if (attrId != null && attrName != null) {
-                specDTO.attributes().add(new AttributeOnlyResponseDTO(attrId, attrName));
+                specDTO.attributes().add(new AttributeOnlyResponseDTO(attrId, attrName, null, null));
             }
         }
 
@@ -112,6 +112,44 @@ public class SpecificationServiceImpl implements SpecificationService {
                         .pagination(paginationInfo)
                         .build())
                 .data(attributeDTOs)
+                .build();
+    }
+
+    @Override
+    public GlobalResponseDTO<NoPaginatedMeta, List<SpecificationOnlyResponseDTO>> getFormSchema() {
+        // Gọi query mới
+        List<Object[]> results = specificationRepository.findFormSchemaData();
+
+        // Logic ánh xạ gần như giữ nguyên, chỉ cần đọc thêm 2 cột mới
+        Map<Integer, SpecificationOnlyResponseDTO> specMap = new HashMap<>();
+        for (Object[] row : results) {
+            Integer specId = (Integer) row[0];
+            String specName = (String) row[1];
+            Integer attrId = row[2] != null ? ((Number) row[2]).intValue() : null;
+            String attrName = (String) row[3];
+            String controlType = (String) row[4]; // <-- LẤY DỮ LIỆU MỚI
+            String optionsSource = (String) row[5]; // <-- LẤY DỮ LIỆU MỚI
+
+            SpecificationOnlyResponseDTO specDTO = specMap.computeIfAbsent(specId, id ->
+                    new SpecificationOnlyResponseDTO(id, specName, new ArrayList<>()));
+
+            if (attrId != null && attrName != null) {
+                // Tạo DTO mới với các trường đã được thêm vào
+                specDTO.attributes().add(
+                        new AttributeOnlyResponseDTO(attrId, attrName, controlType, optionsSource)
+                );
+            }
+        }
+
+        List<SpecificationOnlyResponseDTO> specDTOs = new ArrayList<>(specMap.values());
+
+        // Trả về kết quả trong GlobalResponseDTO như cũ
+        return GlobalResponseDTO.<NoPaginatedMeta, List<SpecificationOnlyResponseDTO>>builder()
+                .meta(NoPaginatedMeta.builder()
+                        .status(Status.SUCCESS)
+                        .message("Lấy cấu trúc form thành công")
+                        .build())
+                .data(specDTOs)
                 .build();
     }
 }

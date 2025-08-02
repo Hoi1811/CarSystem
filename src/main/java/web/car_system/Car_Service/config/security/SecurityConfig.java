@@ -41,6 +41,8 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(Endpoint.V1.AUTH.LOGIN, Endpoint.V1.AUTH.AUTHORIZE,Endpoint.V1.AUTH.OAUTH2CALLBACK , Endpoint.V1.AUTH.REGISTER, Endpoint.V1.AUTH.REFRESH_TOKEN, Endpoint.V1.AUTH.LOGOUT).permitAll()
                         .requestMatchers(Endpoint.V1.USER.ME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.OPTIONS.OPTIONS_BY_SOURCE_NAME).permitAll()
+                        .requestMatchers(Endpoint.V1.CAR.SPECIFICATIONS_SCHEMA).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/cars/*/images").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/cars/*/images").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(GET, "/api/v1/specifications").hasAuthority("ROLE_ADMIN")

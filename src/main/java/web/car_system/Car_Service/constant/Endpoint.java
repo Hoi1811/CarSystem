@@ -59,6 +59,7 @@ public class Endpoint {
             // Specification endpoints
             public static final String SPECIFICATIONS = PREFIX + "/specifications";
             public static final String SPECIFICATION_ATTRIBUTES = SPECIFICATIONS + "/attributes";
+            public static final String SPECIFICATIONS_SCHEMA = SPECIFICATIONS + "/schema";
         }
         public static final class USER{
             public static final String USER = PREFIX + "/users";
@@ -87,6 +88,12 @@ public class Endpoint {
             public static final String CAR_AUDIT_HISTORY = AUDIT + "/cars/{id}";
             public static final String CAR_AT_REVISION = AUDIT + "/cars/{id}/revision/{revisionNumber}";
 
+        }
+
+        public static final class OPTIONS {
+            // Options endpoints
+            public static final String OPTIONS_PREFIX = PREFIX + "/options";
+            public static final String OPTIONS_BY_SOURCE_NAME = OPTIONS_PREFIX + "/{sourceName}";
         }
     }
 }
