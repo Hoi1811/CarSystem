@@ -5,11 +5,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
-import web.car_system.Car_Service.domain.dto.car.AddCarRequestDTO;
+import web.car_system.Car_Service.domain.dto.car.*;
 import web.car_system.Car_Service.domain.dto.attribute.AttributeResponseDTO;
-import web.car_system.Car_Service.domain.dto.car.CarDetailsResponseDTO;
-import web.car_system.Car_Service.domain.dto.car.CarResponseDTO;
-import web.car_system.Car_Service.domain.dto.car.UpdateCarRequestDTO;
 import web.car_system.Car_Service.domain.dto.specification.SpecificationResponseDTO;
 import web.car_system.Car_Service.domain.entity.Car;
 import web.car_system.Car_Service.domain.entity.CarAttribute;
@@ -21,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface CarMapper {
     CarMapper INSTANCE = Mappers.getMapper(CarMapper.class);
 
@@ -45,9 +42,13 @@ public interface CarMapper {
     @Mapping(target = "origin", ignore = true) // Không dùng trong JSON
     Car toCar(UpdateCarRequestDTO updateCarRequestDTO);
 
-    @Mapping(target = "carId", ignore = true) // Bỏ qua các trường không cần cập nhật
-    @Mapping(target = "images", ignore = true)
-    @Mapping(target = "thumbnail", ignore = true)
+    @Mapping(target = "carId", ignore = true) // Luôn bỏ qua ID
+    @Mapping(target = "images", ignore = true) // Quản lý riêng trong service
+    @Mapping(target = "thumbnail", ignore = true) // Quản lý riêng trong service
+    @Mapping(target = "carAttributes", ignore = true) // Quản lý riêng trong service
+    @Mapping(target = "carTypes", ignore = true) // Sẽ được xử lý riêng
+    @Mapping(target = "manufacturer", ignore = true) // Xử lý bằng ID
+    @Mapping(target = "carSegment", ignore = true) // Xử lý bằng ID
     void updateCarFromDto(UpdateCarRequestDTO dto, @MappingTarget Car car);
 
     // 2. Chuyển từ Car entity sang CarResponse
@@ -96,5 +97,9 @@ public interface CarMapper {
                 .map(CarType::getTypeId)
                 .collect(Collectors.toList());
     }
+
+
+    CarSuggestionDto toCarSuggestionDto(Car car);
+    List<CarSuggestionDto> toCarSuggestionDtoList(List<Car> cars);
 
 }

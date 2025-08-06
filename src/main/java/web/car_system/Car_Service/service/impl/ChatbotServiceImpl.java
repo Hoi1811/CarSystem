@@ -28,7 +28,7 @@ import com.vladsch.flexmark.util.data.MutableDataSet; // Import
 @Service
 public class ChatbotServiceImpl implements ChatbotService {
     private final String DEFAULT_SYSTEM_INSTRUCTION = "Bạn là một trợ lý AI chuyên về dịch vụ xe hơi. Hãy trả lời ngắn gọn, lịch sự, đưa ra ý chính và chỉ cung cấp thông tin liên quan đến xe hơi, dịch vụ sửa chữa, hoặc bảo trì. Nếu không biết câu trả lời, hãy nói 'Tôi không có thông tin về vấn đề này, vui lòng liên hệ trung tâm dịch vụ.'";
-    private final String MODEL_NAME = "gemini-2.0-flash-001";
+    private final String MODEL_NAME = "gemini-2.5-flash-lite";
     private final String ERROR_MESSAGE = "Rất xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau.";
     private final String AI_NOT_AVAILABLE = "Trợ lý AI hiện không khả dụng. Vui lòng thử lại sau.";
     @Value("${google.gemini.api.key}")

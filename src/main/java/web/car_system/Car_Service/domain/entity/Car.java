@@ -8,6 +8,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.Where;
 import org.hibernate.envers.Audited;
 
 import java.math.BigDecimal;
@@ -15,7 +17,9 @@ import java.sql.Timestamp;
 import java.util.List;
 
 @Entity
-@Table(name = "cars")
+@Table(name = "cars", uniqueConstraints = {
+        @UniqueConstraint(name = "uc_car_name_model", columnNames = {"name", "model"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,6 +28,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "carId")
 @SQLDelete(sql = "UPDATE cars SET deleted_at = CURRENT_TIMESTAMP WHERE car_id = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Audited
 public class Car extends BaseEntity{
 
@@ -52,6 +57,30 @@ public class Car extends BaseEntity{
     private BigDecimal price;
 
     private String thumbnail;
+
+    @Column(name = "engine_type", length = 20)
+    private String engineType;
+
+    @Column(name = "drive_train", length = 10)
+    private String driveTrain;
+
+    @Column(name = "transmission_type", length = 20)
+    private String transmissionType;
+
+    @Column(name = "seats")
+    private Integer seats;
+
+    @Column(name = "horsepower")
+    private Integer horsepower;
+
+    @Column(name = "fuel_consumption")
+    private Float fuelConsumption;
+
+    @Column(name = "has_sunroof")
+    private Boolean hasSunroof;
+
+    @Column(name = "airbag_count")
+    private Integer airbagCount;
 
     // Liên kết đến Segment entity
     @ManyToOne(fetch = FetchType.LAZY)

@@ -17,7 +17,6 @@ public record AddCarRequestDTO(
         String model,
         Integer year,
         BigDecimal price,
-        List<MultipartFile> images,      // Danh sách ảnh
         Integer thumbnailIndex,// Chỉ số ảnh làm thumbnail (0-based)
         @JsonProperty("car_type_ids")
         List<Integer> carTypeIds,

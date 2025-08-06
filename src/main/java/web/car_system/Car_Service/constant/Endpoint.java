@@ -38,6 +38,7 @@ public class Endpoint {
             public static final String FIND_RELATED_MODELS_BY_NAME = CAR + "/related-models";
             public static final String FIND_RELATED_CAR_NAMES_BY_NAME = CAR + "/related-car-names";
             public static final String COMPARE_CARS = CAR + "/compare-cars";
+            public static final String CAR_ID_SUGGESTIONS = CAR_ID + "/suggestions";
             // Car Segment endpoints
             public static final String CAR_SEGMENT = PREFIX + "/car-segments";
             public static final String CAR_SEGMENT_ID = CAR_SEGMENT + "/{segmentId}";
@@ -60,6 +61,8 @@ public class Endpoint {
             public static final String SPECIFICATIONS = PREFIX + "/specifications";
             public static final String SPECIFICATION_ATTRIBUTES = SPECIFICATIONS + "/attributes";
             public static final String SPECIFICATIONS_SCHEMA = SPECIFICATIONS + "/schema";
+
+            public static final String CHANGE_CAR_STATUS = CAR + "/{carId}/status";
         }
         public static final class USER{
             public static final String USER = PREFIX + "/users";

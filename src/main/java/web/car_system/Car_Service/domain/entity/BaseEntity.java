@@ -7,6 +7,7 @@ import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Where;
 
@@ -16,7 +17,7 @@ import java.sql.Timestamp;
 @Getter
 @Setter
 @MappedSuperclass
-@Where(clause = "deleted_at IS NULL")
+@SQLRestriction("deleted_at IS NULL")
 public abstract class BaseEntity implements Serializable {
 
     @CreationTimestamp

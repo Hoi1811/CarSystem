@@ -109,7 +109,8 @@ public class JwtFilter extends OncePerRequestFilter {
                 Pair.of("/oauth2", "GET"),
                 Pair.of("chatbot", "POST"),
                 Pair.of("/options", "GET"),
-                Pair.of("/schema", "GET")
+                Pair.of("/schema", "GET"),
+                Pair.of("/suggestions", "GET")
         );
         for (Pair<String, String> bypassToken : bypassTokens) {
             if (request.getServletPath().contains(bypassToken.getFirst())

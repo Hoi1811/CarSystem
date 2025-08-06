@@ -20,9 +20,9 @@ public class CarSpecification {
             // Áp dụng các bộ lọc chung cho query chính
             applyCommonFilters(filter, root, cb, predicates);
 
-            // Subquery để lấy giá rẻ nhất cho xe có cùng tên, thỏa mãn các bộ lọc
-            Subquery<BigDecimal> minPriceSubquery = query.subquery(BigDecimal.class);
-            Root<Car> subRoot = minPriceSubquery.from(Car.class);
+            // Subquery để lấy id của xe có model nhỏ nhất (theo thứ tự alphabet) cho xe có cùng tên
+            Subquery<Long> minIdSubquery = query.subquery(Long.class);
+            Root<Car> subRoot = minIdSubquery.from(Car.class);
             List<Predicate> subQueryPredicates = new ArrayList<>();
 
             // Điều kiện cơ bản của subquery: cùng tên
@@ -31,10 +31,25 @@ public class CarSpecification {
             // Áp dụng lại các bộ lọc cho subquery
             applyCommonFilters(filter, subRoot, cb, subQueryPredicates);
 
-            minPriceSubquery.select(cb.min(subRoot.get("price")))
+            // Tạo subquery con để tìm model nhỏ nhất cho mỗi tên xe
+            Subquery<String> minModelInnerSubquery = query.subquery(String.class);
+            Root<Car> innerSubRoot = minModelInnerSubquery.from(Car.class);
+
+            // SỬA LỖI Ở ĐÂY: Thêm .as(String.class) để chỉ định kiểu dữ liệu
+            minModelInnerSubquery.select(cb.least(innerSubRoot.get("model").as(String.class)))
+                    .where(cb.and(
+                            cb.equal(innerSubRoot.get("name"), subRoot.get("name")),
+                            cb.and(subQueryPredicates.toArray(new Predicate[0]))
+                    ));
+
+            // Lấy id nhỏ nhất của xe có model = model nhỏ nhất
+            subQueryPredicates.add(cb.equal(subRoot.get("model"), minModelInnerSubquery));
+
+            minIdSubquery.select(cb.min(subRoot.get("id")))
                     .where(cb.and(subQueryPredicates.toArray(new Predicate[0])));
 
-            predicates.add(cb.equal(root.get("price"), minPriceSubquery));
+            // Điều kiện để lấy xe có id khớp với id nhỏ nhất
+            predicates.add(cb.equal(root.get("id"), minIdSubquery));
 
             // Xử lý sắp xếp dựa trên fields và direction
             applySorting(filter, root, query, cb);
@@ -87,6 +102,10 @@ public class CarSpecification {
         if (filter.maxPrice() != null && filter.maxPrice().compareTo(BigDecimal.ZERO) > 0) {
             predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.maxPrice()));
         }
+
+        if (filter.status() != null && !filter.status().isEmpty()) {
+            predicates.add(root.get("status").in(filter.status()));
+        }
     }
 
     private static void applySorting(FilterCarPaginationRequestDTO filter, Root<Car> root,
@@ -118,7 +137,7 @@ public class CarSpecification {
 
     private static boolean isValidSortField(String field) {
         // Danh sách các trường hợp lệ để sắp xếp
-        // Cập nhật theo schema của entity Car
-        return List.of("name", "price", "id").contains(field);
+        // Cập nhật theo schema của entity Car, thêm "model" vào danh sách
+        return List.of("name", "price", "id", "model").contains(field);
     }
 }

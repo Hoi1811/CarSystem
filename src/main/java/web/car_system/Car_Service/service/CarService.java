@@ -7,6 +7,7 @@ import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
 import web.car_system.Car_Service.domain.dto.projection.OptionProjection;
+import web.car_system.Car_Service.domain.entity.EntityStatus;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,8 +15,8 @@ import java.util.List;
 public interface CarService {
 
     GlobalResponseDTO<?, CarDetailsResponseDTO> createCar(AddCarRequestDTO carRequest);
-    GlobalResponseDTO<?, CarDetailsResponseDTO> createCarV2(AddCarRequestDTO carRequest);
-    GlobalResponseDTO<?, CarDetailsResponseDTO> createCarV3(AddCarRequestDTO carRequest);
+    GlobalResponseDTO<?, CarDetailsResponseDTO> createCarV2(AddCarRequestDTO carRequest, List<MultipartFile> newImages);
+//    GlobalResponseDTO<?, CarDetailsResponseDTO> createCarV3(AddCarRequestDTO carRequest);
     GlobalResponseDTO<?, CarDetailsResponseDTO> getCarById(Integer id);
     GlobalResponseDTO<?, List<CarDetailsResponseDTO>> getAllCars();
     GlobalResponseDTO<PaginatedMeta, List<CarResponseDTO>> getAllCarsPaginated(int page);
@@ -27,4 +28,6 @@ public interface CarService {
     GlobalResponseDTO<NoPaginatedMeta, List<CarDetailsResponseDTO>> compareCars(CompareCarsRequestDTO compareCarsRequestDTO);
     GlobalResponseDTO<NoPaginatedMeta, List<OptionProjection>> findRelatedModelsByCarName(FindRelatedCarsRequestDTO requestDTO);
     GlobalResponseDTO<NoPaginatedMeta, List<OptionProjection>> findRelatedCarNamesByCarName(FindRelatedCarsRequestDTO requestDTO);
+    List<CarSuggestionDto> findSimilarCars(Integer carId);
+    void updateStatus(Integer carId, EntityStatus newStatus);
 }
