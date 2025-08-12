@@ -627,17 +627,14 @@ public class CarServiceImpl implements CarService {
 
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                     "public_id", publicId, // Dùng cùng public_id
-                    "folder", "car_images",
-                    "width", TARGET_WIDTH,
-                    "height", TARGET_HEIGHT,
-                    "crop", "pad",
-                    "background", "black"
+                    "folder", "car_images"
             ));
 
             Image newImage = new Image();
             newImage.setCar(car);
             // Lưu URL là public ID không có folder. Tên file trong DB nên nhất quán.
-            newImage.setUrl(publicId + ".jpg"); // Ví dụ: lưu cả extension
+            String imageUrl = (String) uploadResult.get("public_id");
+            newImage.setUrl(imageUrl);
             newImage.setFileHash(calculateFileHash(file));
             uploadedImages.add(newImage);
         }
