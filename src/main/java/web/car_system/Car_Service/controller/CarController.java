@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import web.car_system.Car_Service.annotation.RestApiV1;
 import web.car_system.Car_Service.constant.Endpoint;
 import web.car_system.Car_Service.domain.dto.car.*;
+import web.car_system.Car_Service.domain.dto.comparison.ComparisonResultDTO;
 import web.car_system.Car_Service.domain.dto.global.FilterCarPaginationRequestDTO;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
@@ -19,6 +21,7 @@ import web.car_system.Car_Service.domain.entity.Attribute;
 import web.car_system.Car_Service.domain.entity.Image;
 import web.car_system.Car_Service.domain.entity.Specification;
 import web.car_system.Car_Service.service.AttributeService;
+import web.car_system.Car_Service.service.ComparisonService;
 import web.car_system.Car_Service.service.ImageService;
 import web.car_system.Car_Service.service.SpecificationService;
 import web.car_system.Car_Service.service.impl.CarServiceImpl;
@@ -38,6 +41,7 @@ public class CarController {
     private final ImageService imageService;
     private final SpecificationService specificationService;
     private final AttributeService attributeService;
+    private final ComparisonService comparisonService;
 
     @PatchMapping(CHANGE_CAR_STATUS)
     public ResponseEntity<?> updateCarStatus(
@@ -131,8 +135,21 @@ public class CarController {
         return ResponseEntity.status(HttpStatus.OK).body(carService.findRelatedCarNamesByCarName(requestDTO));
     }
     @PostMapping(Endpoint.V1.CAR.COMPARE_CARS)
-    public ResponseEntity<GlobalResponseDTO<?,?>> compareCars(@RequestBody CompareCarsRequestDTO requestDTO){
-        return ResponseEntity.status(HttpStatus.OK).body(carService.compareCars(requestDTO));
+    public ResponseEntity<GlobalResponseDTO<?, ComparisonResultDTO>> compareCars(
+            @RequestBody CompareCarsRequestDTO requestDTO) {
+
+        List<Integer> carIds = requestDTO.ids();
+        ComparisonResultDTO result = comparisonService.compareCars(carIds);
+
+        GlobalResponseDTO<?, ComparisonResultDTO> response = GlobalResponseDTO.<NoPaginatedMeta, ComparisonResultDTO>builder()
+                .meta(NoPaginatedMeta.builder()
+                        .status(Status.SUCCESS)
+                        .message("So sánh xe thành công")
+                        .build())
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
     @PostMapping(Endpoint.V1.CAR.CAR)
     public ResponseEntity<GlobalResponseDTO<?, ?>> createCar(@RequestBody AddCarRequestDTO carRequest) {
@@ -187,7 +204,7 @@ public class CarController {
 //    }
 
     @GetMapping(Endpoint.V1.CAR.CAR_ID)
-    public ResponseEntity<GlobalResponseDTO<?, ?>> getCarById(@PathVariable Integer id) {
+    public ResponseEntity<GlobalResponseDTO<?, ?>> getCarById(@PathVariable @Min(0) Integer id) {
         return ResponseEntity.ok(carService.getCarById(id));
     }
 
@@ -265,21 +282,5 @@ public class CarController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping(Endpoint.V1.CAR.CAR_SPECIFICATION_ATTRIBUTES)
-    public ResponseEntity<Attribute> createAttribute(@PathVariable Integer specId, @RequestBody String name) {
-        Attribute attribute = attributeService.createAttribute(specId, name);
-        return ResponseEntity.status(HttpStatus.CREATED).body(attribute);
-    }
 
-    @PutMapping(Endpoint.V1.CAR.CAR_ATTRIBUTE_ID)
-    public ResponseEntity<Attribute> updateAttribute(@PathVariable Integer id, @RequestBody String name) {
-        Attribute attribute = attributeService.updateAttribute(id, name);
-        return ResponseEntity.ok(attribute);
-    }
-
-    @DeleteMapping(Endpoint.V1.CAR.CAR_ATTRIBUTE_ID)
-    public ResponseEntity<Void> deleteAttribute(@PathVariable Integer id) {
-        attributeService.deleteAttribute(id);
-        return ResponseEntity.noContent().build();
-    }
 }

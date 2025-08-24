@@ -5,8 +5,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
+import web.car_system.Car_Service.domain.dto.attribute.CarAttributeDTO;
 import web.car_system.Car_Service.domain.dto.car.*;
-import web.car_system.Car_Service.domain.dto.attribute.AttributeResponseDTO;
 import web.car_system.Car_Service.domain.dto.specification.SpecificationResponseDTO;
 import web.car_system.Car_Service.domain.entity.Car;
 import web.car_system.Car_Service.domain.entity.CarAttribute;
@@ -64,7 +64,7 @@ public interface CarMapper {
     @Mapping(source = "attribute.attributeId", target = "id") // Lấy id từ Attribute
     @Mapping(source = "attribute.name", target = "name") // Chỉ lấy name từ Attribute
     @Mapping(source = "value", target = "value") // Lấy value từ CarAttribute
-    AttributeResponseDTO toAttributeResponse(CarAttribute carAttribute);
+    CarAttributeDTO toAttributeResponse(CarAttribute carAttribute);
 
     // 4. Nhóm CarAttributes thành danh sách SpecificationResponse
     @Named("mapCarAttributesToSpecifications")
@@ -81,7 +81,7 @@ public interface CarMapper {
         return groupedBySpec.entrySet().stream()
                 .map(entry -> {
                     web.car_system.Car_Service.domain.entity.Specification spec = entry.getKey();
-                    List<AttributeResponseDTO> attrResponses = entry.getValue().stream()
+                    List<CarAttributeDTO> attrResponses = entry.getValue().stream()
                             .map(this::toAttributeResponse)
                             .collect(Collectors.toList());
                     return new SpecificationResponseDTO(spec.getSpecificationId(), spec.getName(), attrResponses);

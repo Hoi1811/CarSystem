@@ -1,15 +1,55 @@
 package web.car_system.Car_Service.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import web.car_system.Car_Service.domain.dto.OptionDto;
+import web.car_system.Car_Service.domain.entity.AttributeEnumOrder;
+import web.car_system.Car_Service.repository.AttributeEnumOrderRepository;
 import web.car_system.Car_Service.service.OptionService;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class OptionServiceImpl implements OptionService {
+    private final AttributeEnumOrderRepository attributeEnumOrderRepository;
+
+    /**
+     * Lấy các tùy chọn (options) dựa vào tên nguồn,
+     * tên nguồn này bây giờ chính là tên của Attribute.
+     * Ví dụ: sourceName = "Hộp số"
+     */
+    @Override
+    public List<OptionDto> getOptionsBySourceName(String sourceName) {
+        if (sourceName == null || sourceName.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Truy vấn động từ cơ sở dữ liệu
+        List<AttributeEnumOrder> enumOrders = attributeEnumOrderRepository.findByAttributeNameOrderByRank(sourceName);
+
+        if (enumOrders.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Chuyển đổi từ List<AttributeEnumOrder> sang List<OptionDto>
+        return enumOrders.stream()
+                .map(this::convertToOptionDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Phương thức private để chuyển đổi từ Entity sang DTO.
+     */
+    private OptionDto convertToOptionDto(AttributeEnumOrder enumOrder) {
+        // id.getValueKey() là "AT", "MT"...
+        // getDisplayValue() là "Tự động (AT)", "Số sàn (MT)"...
+        return new OptionDto(enumOrder.getId().getValueKey(), enumOrder.getDisplayValue());
+    }
+    /**
     @Override
     public List<OptionDto> getOptionsBySourceName(String sourceName) {
         if (sourceName == null) {
@@ -71,4 +111,5 @@ public class OptionServiceImpl implements OptionService {
                 new OptionDto("PHEV", "Plug-in Hybrid")
         );
     }
+    **/
 }

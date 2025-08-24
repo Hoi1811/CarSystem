@@ -38,41 +38,57 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        //==> Các endpoint công khai, không cần xác thực
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers(Endpoint.V1.AUTH.LOGIN, Endpoint.V1.AUTH.AUTHORIZE,Endpoint.V1.AUTH.OAUTH2CALLBACK , Endpoint.V1.AUTH.REGISTER, Endpoint.V1.AUTH.REFRESH_TOKEN, Endpoint.V1.AUTH.LOGOUT).permitAll()
-                        .requestMatchers(Endpoint.V1.USER.ME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(
+                                Endpoint.V1.AUTH.LOGIN,
+                                Endpoint.V1.AUTH.AUTHORIZE,
+                                Endpoint.V1.AUTH.OAUTH2CALLBACK,
+                                Endpoint.V1.AUTH.REGISTER,
+                                Endpoint.V1.AUTH.REFRESH_TOKEN,
+                                Endpoint.V1.AUTH.LOGOUT
+                        ).permitAll()
                         .requestMatchers(Endpoint.V1.OPTIONS.OPTIONS_BY_SOURCE_NAME).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.SPECIFICATIONS_SCHEMA).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.CAR_ID_SUGGESTIONS).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.COMPARE_CARS).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/cars/*/images").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/cars/*/images").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers(GET, "/api/v1/specifications").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(POST, "api/v1/cars/paginated").permitAll()
-                        .requestMatchers(POST, "api/v1/cars/related-cars").permitAll()
-                        .requestMatchers(POST, "api/v1/cars/related-models").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers(POST, "api/v1/cars/related-car-names").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers(POST, "/api/v1/specifications").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(POST,"/api/v1/permissions/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(POST,"/api/v1/roles/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(POST,"/api/v1/users/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(GET,"/api/v1/manufacturers").permitAll()
-                        .requestMatchers(GET,"/api/v1/manufacturers/**").permitAll()
-                        .requestMatchers(GET, "/api/v1/car-types").permitAll()
-                        .requestMatchers(GET, "/api/v1/car-segment-groups").permitAll()
-                        .requestMatchers(GET, "/api/v1/car-segments").permitAll()
-                        .requestMatchers(GET, "/api/v1/cars/**").permitAll()
-                        .requestMatchers(POST, "/api/v1/cars/v2").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers(GET, "api/v1/users/*/authorities").permitAll()
-                        .requestMatchers("/api/v1/permissions/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/v1/roles/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/v1/users/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.CAR.CAR_PAGINATED).permitAll() // Sửa từ POST thành cho mọi method nếu cần
+                        .requestMatchers(Endpoint.V1.CAR.FIND_RELATED_CARS_BY_NAME).permitAll()
+                        .requestMatchers(Endpoint.V1.CHATBOT.CHAT).permitAll()
+                        .requestMatchers(
+                                Endpoint.V1.CAR.MANUFACTURER,
+                                Endpoint.V1.CAR.MANUFACTURER + "/**",
+                                Endpoint.V1.CAR.CAR_TYPE,
+                                Endpoint.V1.CAR.CAR_SEGMENT_GROUP,
+                                Endpoint.V1.CAR.CAR_SEGMENT
+                        ).permitAll()
+                        .requestMatchers(GET, Endpoint.V1.CAR.CAR + "/**").permitAll() // Cho phép GET toàn bộ thông tin xe
+                        .requestMatchers(GET, Endpoint.V1.CAR.CAR_ID_IMAGES).permitAll()
+                        .requestMatchers(GET, Endpoint.V1.USER.USER_AUTHORITIES).permitAll()
 
-                        .requestMatchers(POST, Endpoint.V1.CHATBOT.CHAT).permitAll()
+                        //==> Các endpoint yêu cầu vai trò USER hoặc ADMIN
+                        .requestMatchers(Endpoint.V1.USER.ME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(POST, Endpoint.V1.CAR.CAR_ID_IMAGES).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_MODELS_BY_NAME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_CAR_NAMES_BY_NAME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(POST, Endpoint.V1.CAR.CAR_V2).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Cho phép tất cả yêu cầu OPTIONS
+                        //==> Các endpoint yêu cầu vai trò ADMIN
+                        .requestMatchers(Endpoint.V1.CAR.SPECIFICATIONS).hasAuthority("ROLE_ADMIN") // Bao gồm cả GET và POST
+                        .requestMatchers(Endpoint.V1.PERMISSION.PERMISSION + "/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.ROLE.ROLE + "/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.USER.USER + "/**").hasAuthority("ROLE_ADMIN")
+                        // THÊM MỚI: Yêu cầu quyền ADMIN cho tất cả API về ATTRIBUTE
+                        .requestMatchers(Endpoint.V1.ATTRIBUTE.ATTRIBUTE_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
 
-                        .requestMatchers(HttpMethod.GET, Endpoint.V1.AUTH.VALIDATE_ADMIN).authenticated()
+                        //
+                        .requestMatchers(Endpoint.V1.COMPARISON_RULE.GET_ALL + "/**").hasAuthority("ROLE_ADMIN")
+
+                        //==> Các endpoint yêu cầu xác thực (đã đăng nhập)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Luôn cho phép yêu cầu OPTIONS
+                        .requestMatchers(GET, Endpoint.V1.AUTH.VALIDATE_ADMIN).authenticated()
+
+                        //==> Tất cả các yêu cầu còn lại đều cần xác thực
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

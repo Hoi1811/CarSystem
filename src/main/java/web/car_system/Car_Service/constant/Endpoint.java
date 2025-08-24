@@ -64,6 +64,22 @@ public class Endpoint {
 
             public static final String CHANGE_CAR_STATUS = CAR + "/{carId}/status";
         }
+        public static final class ATTRIBUTE {
+            public static final String ATTRIBUTE_PREFIX = PREFIX + "/attributes";
+
+            public static final String CREATE_ATTRIBUTE = ATTRIBUTE_PREFIX;                 // POST /api/v1/attributes
+            public static final String GET_ALL_ATTRIBUTES = ATTRIBUTE_PREFIX;                 // GET /api/v1/attributes
+            public static final String GET_ATTRIBUTE_BY_ID = ATTRIBUTE_PREFIX + "/{id}";    // GET /api/v1/attributes/{id}
+            public static final String UPDATE_ATTRIBUTE = ATTRIBUTE_PREFIX + "/{id}";    // PUT /api/v1/attributes/{id}
+            public static final String DELETE_ATTRIBUTE = ATTRIBUTE_PREFIX + "/{id}";    // DELETE /api/v1/attributes/{id}
+
+            public static final String ATTRIBUTE_OPTIONS_PREFIX = GET_ATTRIBUTE_BY_ID + "/options"; // /api/v1/attributes/{id}/options
+
+            public static final String ADD_OPTION_TO_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX;              // POST .../{id}/options
+            public static final String GET_OPTIONS_FOR_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX;              // GET .../{id}/options
+            public static final String UPDATE_OPTION_FOR_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{key}"; // PUT .../{id}/options/{key}
+            public static final String DELETE_OPTION_FROM_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{key}";// DELETE .../{id}/options/{key}
+        }
         public static final class USER{
             public static final String USER = PREFIX + "/users";
             public static final String ME = USER + "/me";
@@ -97,6 +113,10 @@ public class Endpoint {
             // Options endpoints
             public static final String OPTIONS_PREFIX = PREFIX + "/options";
             public static final String OPTIONS_BY_SOURCE_NAME = OPTIONS_PREFIX + "/{sourceName}";
+        }
+        public static final class COMPARISON_RULE {
+            private static final String RULE_PREFIX = PREFIX + "/comparison-rules";
+            public static final String GET_ALL = RULE_PREFIX; // GET /api/v1/comparison-rules
         }
     }
 }
