@@ -62,8 +62,13 @@ build/
 application.properties
 *.properties
 **/application.yml
-
+*.yml
 **/application.properties
+
+# Bỏ qua các tệp cấu hình môi trường
+**/*.yml
+**/*.yaml
+
 
 **/.env
 **/.env.*
@@ -71,7 +76,7 @@ application.properties
 **/.env.development
 **/.env.production
 
+**/*.pem
 **/.pem
-=======
-**/.pem
+
 

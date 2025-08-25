@@ -5,10 +5,12 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "attributes")
 @Data
+@Audited
 public class Attribute {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

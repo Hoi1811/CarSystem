@@ -5,23 +5,36 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.Where;
+import org.hibernate.envers.Audited;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
 
 @Entity
-@Table(name = "cars")
-@Data
+@Table(name = "cars", uniqueConstraints = {
+        @UniqueConstraint(name = "uc_car_name_model", columnNames = {"name", "model"})
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(callSuper = true)
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "carId")
-public class Car {
+@SQLDelete(sql = "UPDATE cars SET deleted_at = CURRENT_TIMESTAMP WHERE car_id = ?")
+@SQLRestriction("deleted_at IS NULL")
+@Audited
+public class Car extends BaseEntity{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "car_id") // Nên đặt tên cột rõ ràng
     private Integer carId;
 
     // ID thuần để insert/update dễ dàng
@@ -45,9 +58,29 @@ public class Car {
 
     private String thumbnail;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private Timestamp createdAt;
+    @Column(name = "engine_type", length = 20)
+    private String engineType;
+
+    @Column(name = "drive_train", length = 10)
+    private String driveTrain;
+
+    @Column(name = "transmission_type", length = 20)
+    private String transmissionType;
+
+    @Column(name = "seats")
+    private Integer seats;
+
+    @Column(name = "horsepower")
+    private Integer horsepower;
+
+    @Column(name = "fuel_consumption")
+    private Float fuelConsumption;
+
+    @Column(name = "has_sunroof")
+    private Boolean hasSunroof;
+
+    @Column(name = "airbag_count")
+    private Integer airbagCount;
 
     // Liên kết đến Segment entity
     @ManyToOne(fetch = FetchType.LAZY)
@@ -84,23 +117,4 @@ public class Car {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<CarAttribute> carAttributes;
-
-    @Override
-    public String toString() {
-        return "Car{" +
-                "carId=" + carId +
-                ", segmentId=" + segmentId +
-                ", manufacturerId=" + manufacturerId +
-                ", name='" + name + '\'' +
-                ", model='" + model + '\'' +
-                ", year=" + year +
-                ", price=" + price +
-                ", thumbnail='" + thumbnail + '\'' +
-                ", createdAt=" + createdAt +
-                ", carSegment=" + carSegment +
-                ", manufacturer=" + manufacturer +
-                ", carTypes=" + carTypes +
-                ", origin=" + origin +
-                '}';
-    }
 }

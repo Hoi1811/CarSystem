@@ -3,6 +3,7 @@ package web.car_system.Car_Service.domain.dto.global;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import web.car_system.Car_Service.constant.PaginationConstant;
+import web.car_system.Car_Service.domain.entity.EntityStatus;
 import web.car_system.Car_Service.domain.entity.Origin;
 import web.car_system.Car_Service.validation.PriceRangeValid; // Giữ lại nếu bạn dùng
 
@@ -58,7 +59,9 @@ public record FilterCarPaginationRequestDTO(
 
         @JsonProperty("max_price")
         @DecimalMin(value = "0.0", inclusive = true, message = "Maximum price must be non-negative.")
-        BigDecimal maxPrice
+        BigDecimal maxPrice,
+
+        List<EntityStatus> status
 ) {
     // Các phương thức getter mặc định vẫn giữ nguyên
     public Integer index() {
@@ -85,6 +88,9 @@ public record FilterCarPaginationRequestDTO(
         return Objects.requireNonNullElse(this.maxPrice, BigDecimal.ZERO);
     }
 
+    public List<EntityStatus> status() {
+        return Objects.requireNonNullElse(this.status, List.of(EntityStatus.VISIBLE, EntityStatus.HIDDEN, EntityStatus.DRAFT));
+    }
     // Phương thức validation cho origin sử dụng @AssertTrue
     @AssertTrue(message = "Invalid origin value(s). If provided, each must be one of: IMPORTED, LOCALLY_ASSEMBLED, DOMESTIC_MANUFACTURING (comma-separated).")
     public boolean isOriginValid() {

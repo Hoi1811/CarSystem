@@ -41,11 +41,15 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(Endpoint.V1.AUTH.LOGIN, Endpoint.V1.AUTH.AUTHORIZE,Endpoint.V1.AUTH.OAUTH2CALLBACK , Endpoint.V1.AUTH.REGISTER, Endpoint.V1.AUTH.REFRESH_TOKEN, Endpoint.V1.AUTH.LOGOUT).permitAll()
                         .requestMatchers(Endpoint.V1.USER.ME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/cars/*/images").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.OPTIONS.OPTIONS_BY_SOURCE_NAME).permitAll()
+                        .requestMatchers(Endpoint.V1.CAR.SPECIFICATIONS_SCHEMA).permitAll()
+                        .requestMatchers(Endpoint.V1.CAR.CAR_ID_SUGGESTIONS).permitAll()
+                        .requestMatchers(Endpoint.V1.CAR.COMPARE_CARS).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/cars/*/images").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/cars/*/images").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(GET, "/api/v1/specifications").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(POST, "api/v1/cars/paginated").permitAll()
-                        .requestMatchers(POST, "api/v1/cars/related-cars").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(POST, "api/v1/cars/related-cars").permitAll()
                         .requestMatchers(POST, "api/v1/cars/related-models").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(POST, "api/v1/cars/related-car-names").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(POST, "/api/v1/specifications").hasAuthority("ROLE_ADMIN")
@@ -57,7 +61,7 @@ public class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/car-types").permitAll()
                         .requestMatchers(GET, "/api/v1/car-segment-groups").permitAll()
                         .requestMatchers(GET, "/api/v1/car-segments").permitAll()
-                        .requestMatchers(GET, "/api/v1/cars/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(GET, "/api/v1/cars/**").permitAll()
                         .requestMatchers(POST, "/api/v1/cars/v2").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(GET, "api/v1/users/*/authorities").permitAll()
                         .requestMatchers("/api/v1/permissions/**").hasAuthority("ROLE_ADMIN")
@@ -65,6 +69,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/users/**").hasAuthority("ROLE_ADMIN")
 
                         .requestMatchers(POST, Endpoint.V1.CHATBOT.CHAT).permitAll()
+
+                        .requestMatchers(POST, Endpoint.V1.AI.SUGGEST).permitAll()
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Cho phép tất cả yêu cầu OPTIONS
 
@@ -106,7 +112,9 @@ public class SecurityConfig {
             "http://localhost:1234",
             "http://localhost:4200",
             "https://just-a-normal-dev.id.vn",
-            "https://be.just-a-normal-dev.id.vn"
+            "https://be.just-a-normal-dev.id.vn",
+            "http://10.2.0.78:4200",
+            "http://10.1.8.15:4200"
     );
     private final List<String> ALLOWED_HTTP_METHODS = List.of(
             GET.toString(),

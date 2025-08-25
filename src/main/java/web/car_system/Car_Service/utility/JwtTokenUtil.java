@@ -9,6 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
@@ -17,6 +18,8 @@ import web.car_system.Car_Service.domain.entity.User;
 import web.car_system.Car_Service.repository.UserRepository;
 import web.car_system.Car_Service.service.RoleService;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -53,22 +56,31 @@ public class JwtTokenUtil {
 
     @PostConstruct
     public void init() throws Exception {
-        String privateKeyContent = new String(Files.readAllBytes(new ClassPathResource(privateKeyPath).getFile().toPath()))
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-        byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyContent);
-        PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-        this.privateKey = kf.generatePrivate(privateSpec);
+        // --- SỬA LẠI CÁCH ĐỌC PRIVATE KEY ---
+        try (InputStream privateKeyStream = new ClassPathResource(privateKeyPath).getInputStream()) {
+            String privateKeyContent = StreamUtils.copyToString(privateKeyStream, StandardCharsets.UTF_8)
+                    .replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s", ""); // dùng replaceAll("\\s", "") để xóa mọi khoảng trắng, kể cả xuống dòng
 
-        String publicKeyContent = new String(Files.readAllBytes(new ClassPathResource(publicKeyPath).getFile().toPath()))
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replaceAll("\\s", "");
-        byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyContent);
-        X509EncodedKeySpec publicSpec = new X509EncodedKeySpec(publicKeyBytes);
-        this.publicKey = kf.generatePublic(publicSpec);
+            byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyContent);
+            PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            this.privateKey = kf.generatePrivate(privateSpec);
+        }
+
+        // --- SỬA LẠI CÁCH ĐỌC PUBLIC KEY ---
+        try (InputStream publicKeyStream = new ClassPathResource(publicKeyPath).getInputStream()) {
+            String publicKeyContent = StreamUtils.copyToString(publicKeyStream, StandardCharsets.UTF_8)
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s", ""); // dùng replaceAll("\\s", "") để xóa mọi khoảng trắng, kể cả xuống dòng
+
+            byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyContent);
+            X509EncodedKeySpec publicSpec = new X509EncodedKeySpec(publicKeyBytes);
+            KeyFactory kf = KeyFactory.getInstance("RSA"); // Bạn có thể tái sử dụng KeyFactory đã tạo ở trên
+            this.publicKey = kf.generatePublic(publicSpec);
+        }
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

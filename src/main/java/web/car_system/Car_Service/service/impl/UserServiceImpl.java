@@ -135,9 +135,7 @@ public class UserServiceImpl implements UserService {
         try {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new NotFoundException("User not found"));
-            user.setDeleted(true);
-            user.setWhenDeleted(LocalDateTime.now());
-            userRepository.save(user);
+            userRepository.delete(user);
             NoPaginatedMeta meta = NoPaginatedMeta.builder()
                     .status(Status.SUCCESS)
                     .message("User deleted successfully")

@@ -38,6 +38,7 @@ public class Endpoint {
             public static final String FIND_RELATED_MODELS_BY_NAME = CAR + "/related-models";
             public static final String FIND_RELATED_CAR_NAMES_BY_NAME = CAR + "/related-car-names";
             public static final String COMPARE_CARS = CAR + "/compare-cars";
+            public static final String CAR_ID_SUGGESTIONS = CAR_ID + "/suggestions";
             // Car Segment endpoints
             public static final String CAR_SEGMENT = PREFIX + "/car-segments";
             public static final String CAR_SEGMENT_ID = CAR_SEGMENT + "/{segmentId}";
@@ -59,6 +60,9 @@ public class Endpoint {
             // Specification endpoints
             public static final String SPECIFICATIONS = PREFIX + "/specifications";
             public static final String SPECIFICATION_ATTRIBUTES = SPECIFICATIONS + "/attributes";
+            public static final String SPECIFICATIONS_SCHEMA = SPECIFICATIONS + "/schema";
+
+            public static final String CHANGE_CAR_STATUS = CAR + "/{carId}/status";
         }
         public static final class USER{
             public static final String USER = PREFIX + "/users";
@@ -80,6 +84,27 @@ public class Endpoint {
         public static final class PERMISSION {
             public static final String PERMISSION = PREFIX + "/permissions";
             public static final String PERMISSION_ID = PERMISSION + "/{permissionId}";
+        }
+
+        public static final class AUDIT {
+            public static final String AUDIT = PREFIX + "/audits";
+            public static final String CAR_AUDIT_HISTORY = AUDIT + "/cars/{id}";
+            public static final String CAR_AT_REVISION = AUDIT + "/cars/{id}/revision/{revisionNumber}";
+
+        }
+
+        public static final class OPTIONS {
+            // Options endpoints
+            public static final String OPTIONS_PREFIX = PREFIX + "/options";
+            public static final String OPTIONS_BY_SOURCE_NAME = OPTIONS_PREFIX + "/{sourceName}";
+        }
+
+        public static final class AI {
+            // Định nghĩa prefix riêng cho module AI, tuân thủ cấu trúc chung
+            public static final String PREFIX = V1.PREFIX + "/ai";
+
+            // Định nghĩa endpoint cụ thể
+            public static final String SUGGEST = PREFIX + "/suggest";
         }
     }
 }

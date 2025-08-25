@@ -32,7 +32,7 @@ public interface SpecificationRepository extends JpaRepository<Specification, In
         """, nativeQuery = true)
     List<Object[]> findAllSpecificationsWithLimitedAttributes();
 
-    @Query("SELECT new web.car_system.Car_Service.domain.dto.attribute.AttributeOnlyResponseDTO(a.attributeId, a.name) " +
+    @Query("SELECT new web.car_system.Car_Service.domain.dto.attribute.AttributeOnlyResponseDTO(a.attributeId, a.name, null , null ) " +
             "FROM Attribute a WHERE a.specification.specificationId = :specId " +
             "AND (:keyword IS NULL OR :keyword = '' OR LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "ORDER BY a.attributeId")
@@ -44,4 +44,19 @@ public interface SpecificationRepository extends JpaRepository<Specification, In
 
     @Query("SELECT COUNT(a) FROM Attribute a")
     long countAttributes();
+
+    @Query(value = """
+        SELECT
+            s.specification_id AS id,
+            s.name AS name,
+            a.attribute_id AS attributeId,
+            a.name AS attributeName,
+            a.control_type AS controlType,      -- <-- THÊM CỘT MỚI
+            a.options_source AS optionsSource   -- <-- THÊM CỘT MỚI
+        FROM specifications s
+        LEFT JOIN attributes a ON s.specification_id = a.specification_id
+        -- WHERE a.active = true -- Tùy chọn: Thêm điều kiện này nếu có cột active
+        ORDER BY s.name ASC, a.name ASC -- Sắp xếp để đảm bảo thứ tự nhất quán
+        """, nativeQuery = true)
+    List<Object[]> findFormSchemaData(); // Đặt tên mới cho phương thức
 }

@@ -18,7 +18,7 @@ public record UpdateCarRequestDTO(
         String model,
         Integer year,
         BigDecimal price,
-        List<MultipartFile> images,      // Danh sách ảnh
+//        List<MultipartFile> images,      // Danh sách ảnh
         Integer thumbnailIndex,// Chỉ số ảnh làm thumbnail (0-based)
         List<String> publicIdsToDelete,
         NewThumbnailInfo newThumbnail,

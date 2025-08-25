@@ -16,4 +16,5 @@ public interface SpecificationService {
     void deleteSpecification(Integer id);
     GlobalResponseDTO<NoPaginatedMeta, List<SpecificationOnlyResponseDTO>> findAllSpecificationsWithLimitedAttributes();
     GlobalResponseDTO<PaginatedMeta, List<AttributeOnlyResponseDTO>> getAttributesBySpecificationId(AttributeSearchRequestDTO request);
+    GlobalResponseDTO<NoPaginatedMeta, List<SpecificationOnlyResponseDTO>> getFormSchema();
 }

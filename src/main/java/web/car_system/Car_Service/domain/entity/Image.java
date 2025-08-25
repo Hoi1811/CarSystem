@@ -2,10 +2,12 @@ package web.car_system.Car_Service.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "IMAGES")
 @Data
+@Audited
 public class Image {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

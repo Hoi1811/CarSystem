@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static web.car_system.Car_Service.constant.Endpoint.V1.CAR.CHANGE_CAR_STATUS;
+
 @AllArgsConstructor
 @RestApiV1
 public class CarController {
@@ -36,6 +38,29 @@ public class CarController {
     private final ImageService imageService;
     private final SpecificationService specificationService;
     private final AttributeService attributeService;
+
+    @PatchMapping(CHANGE_CAR_STATUS)
+    public ResponseEntity<?> updateCarStatus(
+            @PathVariable Integer carId,
+            // Dùng Enum trực tiếp trong DTO
+            @RequestBody UpdateCarStatusRequestDTO request) {
+
+        carService.updateStatus(carId, request.entityStatus());
+        return ResponseEntity.ok().body("Cập nhật trạng thái thành công.");
+    }
+
+    @GetMapping(Endpoint.V1.CAR.CAR_ID_SUGGESTIONS)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<CarSuggestionDto>>> getSuggestions(@PathVariable Integer id) {
+        List<CarSuggestionDto> suggestions = carService.findSimilarCars(id);
+
+        GlobalResponseDTO<NoPaginatedMeta, List<CarSuggestionDto>> response =
+                GlobalResponseDTO.<NoPaginatedMeta, List<CarSuggestionDto>>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Lấy danh sách xe gợi ý thành công").build())
+                        .data(suggestions)
+                        .build();
+
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping(value = Endpoint.V1.CAR.CAR_IMPORT, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GlobalResponseDTO<?, ?>> importCars(
@@ -116,12 +141,13 @@ public class CarController {
 
     @PostMapping(value = Endpoint.V1.CAR.CAR_V2, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GlobalResponseDTO<?, ?>> createCarV2(
+            // Part 1: Chứa toàn bộ dữ liệu JSON (đã bỏ MultipartFile)
             @RequestPart("carRequest") AddCarRequestDTO carRequest,
-            @RequestPart("images") MultipartFile[] images,
-            @RequestParam("thumbnailIndex") Integer thumbnailIndex)
-            throws IOException, NoSuchAlgorithmException {
 
-        if (images == null || images.length == 0) {
+            // Part 2: Chứa các file ảnh (Đổi tên thành 'newImages' cho nhất quán)
+            @RequestPart("newImages") List<MultipartFile> newImages)  {
+
+        if (newImages == null || newImages.isEmpty()) {
             return ResponseEntity.badRequest().body(
                     GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                             .meta(NoPaginatedMeta.builder()
@@ -132,55 +158,33 @@ public class CarController {
                             .build());
         }
 
-        AddCarRequestDTO adjustedRequest = new AddCarRequestDTO(
-                carRequest.manufacturerId(),
-                carRequest.segmentId(),
-                carRequest.name(),
-                carRequest.model(),
-                carRequest.year(),
-                carRequest.price(),
-                Arrays.asList(images),
-                thumbnailIndex,
-                carRequest.carTypeIds(),
-                carRequest.origin(),
-                carRequest.specifications()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(carService.createCarV2(adjustedRequest));
+        GlobalResponseDTO<?, CarDetailsResponseDTO> response = carService.createCarV2(carRequest, newImages);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping(value = Endpoint.V1.CAR.CAR_V3, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<GlobalResponseDTO<?, ?>> createCarV3(
-            @RequestPart("carRequest") AddCarRequestDTO carRequest,
-            @RequestPart("images") MultipartFile[] images,
-            @RequestParam("thumbnailIndex") Integer thumbnailIndex)
-            throws Throwable {
-
-        if (images == null || images.length == 0) {
-            return ResponseEntity.badRequest().body(
-                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
-                            .meta(NoPaginatedMeta.builder()
-                                    .status(Status.ERROR)
-                                    .message("Required part 'images' is not present")
-                                    .build())
-                            .data(null)
-                            .build());
-        }
-
-        AddCarRequestDTO adjustedRequest = new AddCarRequestDTO(
-                carRequest.manufacturerId(),
-                carRequest.segmentId(),
-                carRequest.name(),
-                carRequest.model(),
-                carRequest.year(),
-                carRequest.price(),
-                Arrays.asList(images),
-                thumbnailIndex,
-                carRequest.carTypeIds(),
-                carRequest.origin(),
-                carRequest.specifications()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(carService.createCarV3(adjustedRequest));
-    }
+//    @PostMapping(value = Endpoint.V1.CAR.CAR_V3, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public ResponseEntity<GlobalResponseDTO<?, ?>> createCarV3(
+//            @RequestPart("carRequest") AddCarRequestDTO carRequest,
+//            @RequestPart("images") MultipartFile[] images,
+//            @RequestParam("thumbnailIndex") Integer thumbnailIndex)
+//            throws Throwable {
+//
+//        if (images == null || images.length == 0) {
+//            return ResponseEntity.badRequest().body(
+//                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+//                            .meta(NoPaginatedMeta.builder()
+//                                    .status(Status.ERROR)
+//                                    .message("Required part 'images' is not present")
+//                                    .build())
+//                            .data(null)
+//                            .build());
+//        }
+//
+//        GlobalResponseDTO<?, CarDetailsResponseDTO> response = carService.createCarV2(carRequest, newImages);
+//
+//        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+//    }
 
     @GetMapping(Endpoint.V1.CAR.CAR_ID)
     public ResponseEntity<GlobalResponseDTO<?, ?>> getCarById(@PathVariable Integer id) {

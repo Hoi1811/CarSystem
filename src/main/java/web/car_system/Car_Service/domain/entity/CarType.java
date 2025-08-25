@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "car_types")
@@ -12,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Audited
 public class CarType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

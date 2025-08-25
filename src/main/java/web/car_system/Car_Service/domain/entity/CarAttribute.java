@@ -7,11 +7,13 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "car_attribute")
 @Data
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+@Audited
 public class CarAttribute {
 
     @EmbeddedId

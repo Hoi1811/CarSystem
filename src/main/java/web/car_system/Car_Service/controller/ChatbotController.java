@@ -24,24 +24,21 @@ import java.time.Instant;
 @Log4j2
 public class ChatbotController {
     private final ChatbotService chatbotService;
+
     @PostMapping(Endpoint.V1.CHATBOT.CHAT)
-    public Mono<ResponseEntity<GlobalResponseDTO<?, ?>>> getChatbotResponse(@RequestBody ChatRequestDTO request) {
-        // Gọi service, nhận về một Mono
-        return chatbotService.getAiReply(request)
-                .doOnSubscribe(s -> log.info("=== Started processing at: {}", Instant.now()))
-                .doOnNext(response -> log.info("=== Got response at: {}", Instant.now()))
-                .doOnError(error -> log.error("=== Error at: {}, Error: ", Instant.now(), error))
-                .doOnCancel(() -> log.warn("=== Request cancelled by client at: {}", Instant.now()))
-                .onErrorResume(ClientAbortException.class, ex -> {
-                    log.warn("Client disconnected during processing");
-                    return Mono.empty(); // Trả về empty response
-                })
-                .map(response -> {
-                    if (response.meta().status() == Status.SUCCESS) {
-                        return ResponseEntity.ok(response);
-                    } else {
-                        return ResponseEntity.badRequest().body(response);
-                    }
-                });
+    public ResponseEntity<GlobalResponseDTO<?, ?>> getChatbotResponse(@RequestBody ChatRequestDTO request) {
+        log.info("Received request for session [{}]. Processing with Virtual Thread...", request.sessionId());
+
+        // Gọi service như bình thường. Không có async/await hay .thenApply
+        GlobalResponseDTO<NoPaginatedMeta, ?> response = chatbotService.getAiReply(request);
+
+        log.info("Finished processing session [{}].", request.sessionId());
+
+        // Trả về kết quả
+        if (response.meta().status() == Status.SUCCESS) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 }
