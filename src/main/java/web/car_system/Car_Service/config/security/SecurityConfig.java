@@ -70,6 +70,8 @@ public class SecurityConfig {
 
                         .requestMatchers(POST, Endpoint.V1.CHATBOT.CHAT).permitAll()
 
+                        .requestMatchers(POST, Endpoint.V1.AI.SUGGEST).permitAll()
+
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Cho phép tất cả yêu cầu OPTIONS
 
                         .requestMatchers(HttpMethod.GET, Endpoint.V1.AUTH.VALIDATE_ADMIN).authenticated()

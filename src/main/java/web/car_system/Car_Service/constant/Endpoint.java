@@ -98,5 +98,13 @@ public class Endpoint {
             public static final String OPTIONS_PREFIX = PREFIX + "/options";
             public static final String OPTIONS_BY_SOURCE_NAME = OPTIONS_PREFIX + "/{sourceName}";
         }
+
+        public static final class AI {
+            // Định nghĩa prefix riêng cho module AI, tuân thủ cấu trúc chung
+            public static final String PREFIX = V1.PREFIX + "/ai";
+
+            // Định nghĩa endpoint cụ thể
+            public static final String SUGGEST = PREFIX + "/suggest";
+        }
     }
 }
