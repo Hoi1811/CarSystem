@@ -24,4 +24,6 @@ public interface AttributeService {
     List<EnumOrderResponseDTO> getOptionsForAttribute(Integer attributeId);
     EnumOrderResponseDTO updateOptionForAttribute(Integer attributeId, String valueKey, EnumOrderRequestDTO requestDTO);
     void deleteOptionFromAttribute(Integer attributeId, String valueKey);
+
+    void saveOrUpdateAllOptions(Integer attributeId, List<EnumOrderRequestDTO> optionsPayload);
 }

@@ -6,6 +6,7 @@ import web.car_system.Car_Service.domain.entity.AttributeEnumOrder;
 import web.car_system.Car_Service.domain.entity.AttributeEnumOrderId;
 
 
+import java.util.Arrays;
 import java.util.List;
 
 @Repository
@@ -29,4 +30,7 @@ public interface AttributeEnumOrderRepository extends JpaRepository<AttributeEnu
      * @return Danh sách các lựa chọn được sắp xếp.
      */
     List<AttributeEnumOrder> findById_AttributeIdOrderByRankAsc(Integer attributeId);
+
+
+    List<AttributeEnumOrder> findById_AttributeId(Integer attributeId);
 }

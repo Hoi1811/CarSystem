@@ -81,6 +81,7 @@ public class SecurityConfig {
                         // THÊM MỚI: Yêu cầu quyền ADMIN cho tất cả API về ATTRIBUTE
                         .requestMatchers(Endpoint.V1.ATTRIBUTE.ATTRIBUTE_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
 
+                        .requestMatchers(GET, Endpoint.V1.UTIL.GET_CONTROL_TYPES).hasAnyAuthority("ROLE_ADMIN")
                         //
                         .requestMatchers(Endpoint.V1.COMPARISON_RULE.GET_ALL + "/**").hasAuthority("ROLE_ADMIN")
 

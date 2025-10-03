@@ -17,6 +17,8 @@ import web.car_system.Car_Service.repository.*;
 import web.car_system.Car_Service.service.AttributeService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -201,6 +203,37 @@ public class AttributeServiceImpl implements AttributeService {
         enumOrderRepository.deleteById(id);
     }
 
+    @Override
+    @Transactional
+    public void saveOrUpdateAllOptions(Integer attributeId, List<EnumOrderRequestDTO> optionsPayload) {
+        Attribute attribute = attributeRepository.findById(attributeId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thuộc tính với ID: " + attributeId));
+        Map<String, AttributeEnumOrder> existingOptionsMap = enumOrderRepository
+                .findById_AttributeId(attributeId).stream()
+                .collect(Collectors.toMap(opt -> opt.getId().getValueKey(), Function.identity()));
+
+        for (EnumOrderRequestDTO dto : optionsPayload) {
+            AttributeEnumOrder existingOption = existingOptionsMap.get(dto.valueKey());
+
+            if (existingOption != null) {
+                // Nếu đã tồn tại -> CẬP NHẬT
+                existingOption.setDisplayValue(dto.displayValue());
+                // Không cập nhật rank ở đây, vì rank được quản lý bằng API riêng (reorder)
+            } else {
+                // Nếu chưa tồn tại -> TẠO MỚI
+                AttributeEnumOrder newOption = new AttributeEnumOrder();
+                AttributeEnumOrderId newId = new AttributeEnumOrderId(attributeId, dto.valueKey());
+                newOption.setId(newId);
+                newOption.setAttribute(attribute);
+                newOption.setDisplayValue(dto.displayValue());
+                // Gán rank mặc định cao nhất hoặc = 0, sau đó người dùng sẽ sắp xếp lại
+                newOption.setRank(99);
+
+                enumOrderRepository.save(newOption); // Lưu bản ghi mới
+            }
+        }
+    }
+
     // --- Helper Method ---
 
     private Attribute findAttributeByIdAndCheckType(Integer attributeId) {
@@ -212,4 +245,5 @@ public class AttributeServiceImpl implements AttributeService {
         }
         return attribute;
     }
+
 }

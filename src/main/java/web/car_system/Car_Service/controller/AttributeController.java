@@ -92,9 +92,9 @@ public class AttributeController {
 
     @PostMapping(Endpoint.V1.ATTRIBUTE.ADD_OPTION_TO_ATTRIBUTE)
     public ResponseEntity<GlobalResponseDTO<?, EnumOrderResponseDTO>> addOptionToAttribute(
-            @PathVariable("attributeId") Integer attributeId,
+            @PathVariable("id") Integer id,
             @Valid @RequestBody EnumOrderRequestDTO requestDTO) {
-        EnumOrderResponseDTO newOption = attributeService.addOptionToAttribute(attributeId, requestDTO);
+        EnumOrderResponseDTO newOption = attributeService.addOptionToAttribute(id, requestDTO);
 
         GlobalResponseDTO<?, EnumOrderResponseDTO> response = GlobalResponseDTO.<NoPaginatedMeta, EnumOrderResponseDTO>builder()
                 .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Thêm tùy chọn mới thành công.").build())
@@ -106,8 +106,8 @@ public class AttributeController {
 
     @GetMapping(Endpoint.V1.ATTRIBUTE.GET_OPTIONS_FOR_ATTRIBUTE)
     public ResponseEntity<GlobalResponseDTO<?, List<EnumOrderResponseDTO>>> getOptionsForAttribute(
-            @PathVariable("attributeId") Integer attributeId) {
-        List<EnumOrderResponseDTO> options = attributeService.getOptionsForAttribute(attributeId);
+            @PathVariable("id") Integer id) {
+        List<EnumOrderResponseDTO> options = attributeService.getOptionsForAttribute(id);
 
         GlobalResponseDTO<?, List<EnumOrderResponseDTO>> response = GlobalResponseDTO.<NoPaginatedMeta, List<EnumOrderResponseDTO>>builder()
                 .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Lấy danh sách tùy chọn thành công.").build())
@@ -119,10 +119,10 @@ public class AttributeController {
 
     @PutMapping(Endpoint.V1.ATTRIBUTE.UPDATE_OPTION_FOR_ATTRIBUTE)
     public ResponseEntity<GlobalResponseDTO<?, EnumOrderResponseDTO>> updateOptionForAttribute(
-            @PathVariable("attributeId") Integer attributeId,
+            @PathVariable("id") Integer id,
             @PathVariable("valueKey") String valueKey,
             @Valid @RequestBody EnumOrderRequestDTO requestDTO) {
-        EnumOrderResponseDTO updatedOption = attributeService.updateOptionForAttribute(attributeId, valueKey, requestDTO);
+        EnumOrderResponseDTO updatedOption = attributeService.updateOptionForAttribute(id, valueKey, requestDTO);
 
         GlobalResponseDTO<?, EnumOrderResponseDTO> response = GlobalResponseDTO.<NoPaginatedMeta, EnumOrderResponseDTO>builder()
                 .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Cập nhật tùy chọn thành công.").build())
@@ -134,14 +134,26 @@ public class AttributeController {
 
     @DeleteMapping(Endpoint.V1.ATTRIBUTE.DELETE_OPTION_FROM_ATTRIBUTE)
     public ResponseEntity<GlobalResponseDTO<?, Void>> deleteOptionFromAttribute(
-            @PathVariable("attributeId") Integer attributeId,
+            @PathVariable("id") Integer id,
             @PathVariable("valueKey") String valueKey) {
-        attributeService.deleteOptionFromAttribute(attributeId, valueKey);
+        attributeService.deleteOptionFromAttribute(id, valueKey);
 
         GlobalResponseDTO<?, Void> response = GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                 .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Xóa tùy chọn thành công.").build())
                 .build();
 
+        return ResponseEntity.ok(response);
+    }
+    @PutMapping(Endpoint.V1.ATTRIBUTE.SAVE_ALL_OPTIONS) // Giả sử bạn có endpoint là ".../{id}/options"
+    public ResponseEntity<GlobalResponseDTO<?, Void>> saveAllOptions(
+            @PathVariable("id") Integer attributeId,
+            @RequestBody List<EnumOrderRequestDTO> optionsPayload) { // Dùng lại DTO cũ hoặc tạo DTO mới
+
+        attributeService.saveOrUpdateAllOptions(attributeId, optionsPayload);
+
+        GlobalResponseDTO<?, Void> response = GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Lưu tất cả tùy chọn thành công.").build())
+                .build();
         return ResponseEntity.ok(response);
     }
 }

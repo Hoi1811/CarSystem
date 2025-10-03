@@ -3,7 +3,6 @@ package web.car_system.Car_Service.constant;
 public class Endpoint {
     public static final class V1{
         public static final String PREFIX = "/api/v1";
-
         public static final class AUTH{
             public static final String PREFIX = V1.PREFIX + "/auth";
             public static final String REGISTER = PREFIX + "/register";
@@ -79,6 +78,7 @@ public class Endpoint {
             public static final String GET_OPTIONS_FOR_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX;              // GET .../{id}/options
             public static final String UPDATE_OPTION_FOR_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{key}"; // PUT .../{id}/options/{key}
             public static final String DELETE_OPTION_FROM_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{key}";// DELETE .../{id}/options/{key}
+            public static final String SAVE_ALL_OPTIONS = ATTRIBUTE_OPTIONS_PREFIX; // PUT .../{id}/options/batch
         }
         public static final class USER{
             public static final String USER = PREFIX + "/users";
@@ -117,6 +117,10 @@ public class Endpoint {
         public static final class COMPARISON_RULE {
             private static final String RULE_PREFIX = PREFIX + "/comparison-rules";
             public static final String GET_ALL = RULE_PREFIX; // GET /api/v1/comparison-rules
+        }
+        public static final class UTIL {
+            private static final String UTIL_PREFIX = PREFIX + "/utils";
+            public static final String GET_CONTROL_TYPES =  UTIL_PREFIX + "/control-types";
         }
     }
 }
