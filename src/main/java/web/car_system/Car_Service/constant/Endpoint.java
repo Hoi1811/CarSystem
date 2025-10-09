@@ -122,5 +122,19 @@ public class Endpoint {
             private static final String UTIL_PREFIX = PREFIX + "/utils";
             public static final String GET_CONTROL_TYPES =  UTIL_PREFIX + "/control-types";
         }
+        public static final class INVENTORY_CAR {
+            // === PUBLIC ENDPOINTS (Dành cho Khách hàng) ===
+            public static final String PREFIX = V1.PREFIX + "/inventory-cars";
+            public static final String GET_ALL_AVAILABLE = PREFIX;              // GET /api/v1/inventory-cars
+            public static final String GET_DETAILS_BY_ID = PREFIX + "/{id}";    // GET /api/v1/inventory-cars/{id}
+
+            // === ADMIN ENDPOINTS (Dành cho Quản trị viên) ===
+            public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/inventory-cars";
+            public static final String ADD_TO_INVENTORY = ADMIN_PREFIX;         // POST /api/v1/admin/inventory-cars
+            public static final String GET_ALL_FOR_ADMIN = ADMIN_PREFIX;        // GET /api/v1/admin/inventory-cars
+            public static final String UPDATE = ADMIN_PREFIX + "/{id}";         // PUT /api/v1/admin/inventory-cars/{id}
+            public static final String DELETE = ADMIN_PREFIX + "/{id}";         // DELETE /api/v1/admin/inventory-cars/{id}
+            public static final String UPDATE_STATUS = ADMIN_PREFIX + "/{id}/status"; // PATCH /api/v1/admin/inventory-cars/{id}/status
+        }
     }
 }
