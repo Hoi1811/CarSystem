@@ -15,4 +15,6 @@ public interface InventoryCarRepository extends JpaRepository<InventoryCar, Long
 
     // Tìm các xe theo trạng thái bán hàng (có phân trang)
     Page<InventoryCar> findAllBySaleStatus(SaleStatus saleStatus, Pageable pageable);
+
+    Page<InventoryCar> findAllByCar_CarIdAndSaleStatus(Integer carId, SaleStatus saleStatus, Pageable pageable);
 }

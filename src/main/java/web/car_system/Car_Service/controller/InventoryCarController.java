@@ -29,9 +29,12 @@ public class InventoryCarController {
     // === PUBLIC ENDPOINTS ===
 
     @GetMapping(GET_ALL_AVAILABLE)
-    public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<InventoryCarDto>>> getAllAvailableCars(Pageable pageable) {
-        Page<InventoryCarDto> cars = inventoryCarService.getAllAvailableCars(pageable);
-        return ResponseFactory.success(cars, "Lấy danh sách xe đang bán thành công");
+    public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<InventoryCarDto>>> getAllAvailableCars(
+            @RequestParam(required = false) Integer carId, // <-- Thêm tham số này
+            Pageable pageable) {
+
+        Page<InventoryCarDto> carPage = inventoryCarService.getAllAvailableCars(carId, pageable);
+        return ResponseFactory.successPageable(carPage, "Lấy danh sách xe thành công.");
     }
 
     @GetMapping(GET_DETAILS_BY_ID)
@@ -53,7 +56,7 @@ public class InventoryCarController {
     @GetMapping(GET_ALL_FOR_ADMIN)
     public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<InventoryCarDto>> > getAllInventoryCarsForAdmin(Pageable pageable) {
         Page<InventoryCarDto> cars = inventoryCarService.getAllInventoryCarsForAdmin(pageable);
-        return ResponseFactory.success(cars, "Lấy danh sách xe trong kho thành công");
+        return ResponseFactory.successPageable(cars, "Lấy danh sách xe trong kho thành công");
     }
 
     @PutMapping(UPDATE)

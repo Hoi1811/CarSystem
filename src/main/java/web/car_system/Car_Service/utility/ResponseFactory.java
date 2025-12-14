@@ -33,7 +33,7 @@ public final class ResponseFactory {
 
     // === PHƯƠNG THỨC CHO RESPONSE THÀNH CÔNG (CÓ PHÂN TRANG) ===
 
-    public static <T> ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<T>>> success(Page<T> pageData, String message) {
+    public static <T> ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<T>>> successPageable(Page<T> pageData, String message) {
         // 1. Tạo đối tượng Pagination (giữ nguyên)
         Pagination pagination = Pagination.builder()
                 .pageIndex(pageData.getNumber())

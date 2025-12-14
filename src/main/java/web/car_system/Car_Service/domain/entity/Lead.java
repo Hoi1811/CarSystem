@@ -2,6 +2,7 @@ package web.car_system.Car_Service.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "leads")
@@ -9,7 +10,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Lead extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

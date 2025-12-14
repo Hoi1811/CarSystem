@@ -52,14 +52,19 @@ public class InventoryCarServiceImpl implements InventoryCarService {
     }
 
     @Override
-    @Transactional(readOnly = true) // readOnly = true để tối ưu hóa hiệu năng cho các truy vấn chỉ đọc
-    public Page<InventoryCarDto> getAllAvailableCars(Pageable pageable) {
-        // Gọi phương thức repository đã tạo để lấy danh sách xe đang bán, có phân trang
-        Page<InventoryCar> availableCarsPage = inventoryCarRepository.findAllBySaleStatus(SaleStatus.AVAILABLE, pageable);
+    @Transactional(readOnly = true)
+    public Page<InventoryCarDto> getAllAvailableCars(Integer carId, Pageable pageable) {
+        Page<InventoryCar> carPage;
 
-        // Dùng stream của Java và mapper để chuyển đổi Page<Entity> thành Page<DTO>
-        // Đây là cách làm chuẩn khi làm việc với Page trong Spring
-        return availableCarsPage.map(inventoryCarMapper::toDto);
+        if (carId != null) {
+            // Nếu có carId, lọc theo carId và trạng thái AVAILABLE
+            carPage = inventoryCarRepository.findAllByCar_CarIdAndSaleStatus(carId, SaleStatus.AVAILABLE, pageable);
+        } else {
+            // Nếu không có, lấy tất cả xe AVAILABLE như cũ
+            carPage = inventoryCarRepository.findAllBySaleStatus(SaleStatus.AVAILABLE, pageable);
+        }
+
+        return carPage.map(inventoryCarMapper::toDto);
     }
 
     @Override

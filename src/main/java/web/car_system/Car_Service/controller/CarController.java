@@ -17,13 +17,12 @@ import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
 import web.car_system.Car_Service.domain.dto.image.CarImagesResponseDTO;
+import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostDto;
+import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostRequest;
 import web.car_system.Car_Service.domain.entity.Attribute;
 import web.car_system.Car_Service.domain.entity.Image;
 import web.car_system.Car_Service.domain.entity.Specification;
-import web.car_system.Car_Service.service.AttributeService;
-import web.car_system.Car_Service.service.ComparisonService;
-import web.car_system.Car_Service.service.ImageService;
-import web.car_system.Car_Service.service.SpecificationService;
+import web.car_system.Car_Service.service.*;
 import web.car_system.Car_Service.service.impl.CarServiceImpl;
 
 import java.io.IOException;
@@ -32,7 +31,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static web.car_system.Car_Service.constant.Endpoint.V1.CAR.CALCULATE_ROLLING_COST;
 import static web.car_system.Car_Service.constant.Endpoint.V1.CAR.CHANGE_CAR_STATUS;
+import static web.car_system.Car_Service.utility.ResponseFactory.success;
 
 @AllArgsConstructor
 @RestApiV1
@@ -42,6 +43,7 @@ public class CarController {
     private final SpecificationService specificationService;
     private final AttributeService attributeService;
     private final ComparisonService comparisonService;
+    private final RegionalFeeService regionalFeeService;
 
     @PatchMapping(CHANGE_CAR_STATUS)
     public ResponseEntity<?> updateCarStatus(
@@ -280,6 +282,14 @@ public class CarController {
     public ResponseEntity<Void> deleteSpecification(@PathVariable Integer id) {
         specificationService.deleteSpecification(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(CALCULATE_ROLLING_COST)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RollingCostDto>> calculateRollingCost(
+            @PathVariable Integer id,
+            @Valid @RequestBody RollingCostRequest request) {
+        RollingCostDto result = regionalFeeService.calculateRollingCost(id, request);
+        return success(result, "Tính toán chi phí lăn bánh thành công.");
     }
 
 

@@ -2,6 +2,10 @@ package web.car_system.Car_Service.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -10,7 +14,9 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
+@SQLDelete(sql = "UPDATE test_drive_appointments SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class TestDriveAppointment extends BaseEntity{
 
     @Id
@@ -59,4 +65,11 @@ public class TestDriveAppointment extends BaseEntity{
     @JoinColumn(name = "assignee_user_id")
     private User assignee;
 
+    @PrePersist
+    public void setDefaultValues() {
+        // Luôn kiểm tra if null để tránh ghi đè lên giá trị đã được set thủ công
+        if (this.appointmentStatus == null) {
+            this.appointmentStatus = AppointmentStatus.PENDING_CONFIRMATION;
+        }
+    }
 }

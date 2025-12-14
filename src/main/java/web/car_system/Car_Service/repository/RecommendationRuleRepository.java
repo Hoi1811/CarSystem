@@ -14,4 +14,5 @@ public interface RecommendationRuleRepository extends JpaRepository<Recommendati
      * @return một List các RecommendationRule đang hoạt động.
      */
     List<RecommendationRule> findAllByIsActiveTrue();
+    boolean existsByRuleName(String ruleName); // <-- Thêm dòng này
 }

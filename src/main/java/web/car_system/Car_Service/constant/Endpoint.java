@@ -62,6 +62,8 @@ public class Endpoint {
             public static final String SPECIFICATIONS_SCHEMA = SPECIFICATIONS + "/schema";
 
             public static final String CHANGE_CAR_STATUS = CAR + "/{carId}/status";
+
+            public static final String CALCULATE_ROLLING_COST = CAR_ID + "/calculate-rolling-cost"; // POST /api/v1/cars/{id}/calculate-rolling-cost
         }
         public static final class ATTRIBUTE {
             public static final String ATTRIBUTE_PREFIX = PREFIX + "/attributes";
@@ -135,6 +137,51 @@ public class Endpoint {
             public static final String UPDATE = ADMIN_PREFIX + "/{id}";         // PUT /api/v1/admin/inventory-cars/{id}
             public static final String DELETE = ADMIN_PREFIX + "/{id}";         // DELETE /api/v1/admin/inventory-cars/{id}
             public static final String UPDATE_STATUS = ADMIN_PREFIX + "/{id}/status"; // PATCH /api/v1/admin/inventory-cars/{id}/status
+
+        }
+        public static final class TEST_DRIVE {
+            // === PUBLIC ENDPOINT (Dành cho Khách hàng) ===
+            public static final String SUBMIT_APPOINTMENT = V1.PREFIX + "/test-drive-appointments"; // POST
+
+            // === ADMIN ENDPOINTS (Dành cho Quản trị viên) ===
+            public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/test-drive-appointments";
+            public static final String GET_ALL = ADMIN_PREFIX;                 // GET (có phân trang)
+            public static final String GET_BY_ID = ADMIN_PREFIX + "/{id}";    // GET
+            public static final String UPDATE = ADMIN_PREFIX + "/{id}";       // PUT (để xác nhận, gán việc, ghi chú)
+            public static final String DELETE = ADMIN_PREFIX + "/{id}";       // DELETE
+        }
+
+        public static final class LEAD {
+            // === PUBLIC ENDPOINT (Dành cho Khách hàng) ===
+            public static final String SUBMIT_LEAD = V1.PREFIX + "/leads"; // POST
+
+            // === ADMIN ENDPOINTS (Dành cho Quản trị viên) ===
+            public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/leads";
+            public static final String GET_ALL = ADMIN_PREFIX;                 // GET (có phân trang)
+            public static final String GET_BY_ID = ADMIN_PREFIX + "/{id}";    // GET
+            public static final String UPDATE = ADMIN_PREFIX + "/{id}";       // PUT (để gán việc, cập nhật trạng thái)
+            public static final String DELETE = ADMIN_PREFIX + "/{id}";       // DELETE
+        }
+        public static final class RECOMMENDATION {
+            // === PUBLIC ENDPOINT (Dành cho Khách hàng) ===
+            // Khách hàng sẽ gửi câu trả lời của họ đến endpoint này
+            public static final String GET_SUGGESTIONS = V1.PREFIX + "/recommendations/suggest"; // POST
+
+            // === ADMIN ENDPOINTS (Dành cho Quản trị viên) ===
+            public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/recommendation-rules";
+            public static final String GET_ALL_RULES = ADMIN_PREFIX;          // GET
+            public static final String GET_RULE_BY_ID = ADMIN_PREFIX + "/{id}"; // GET
+            public static final String CREATE_RULE = ADMIN_PREFIX;            // POST
+            public static final String UPDATE_RULE = ADMIN_PREFIX + "/{id}";    // PUT
+            public static final String DELETE_RULE = ADMIN_PREFIX + "/{id}";    // DELETE
+        }
+        // 2. Endpoint CRUD cho Admin quản lý phí
+        public static final class REGIONAL_FEE {
+            public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/regional-fees";
+            public static final String GET_ALL = ADMIN_PREFIX;          // GET
+            public static final String CREATE = ADMIN_PREFIX;             // POST
+            public static final String UPDATE = ADMIN_PREFIX + "/{id}";     // PUT
+            public static final String DELETE = ADMIN_PREFIX + "/{id}";     // DELETE
         }
     }
 }
