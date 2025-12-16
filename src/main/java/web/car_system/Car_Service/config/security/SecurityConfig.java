@@ -55,6 +55,8 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.CAR.CAR_PAGINATED).permitAll() // Sửa từ POST thành cho mọi method nếu cần
                         .requestMatchers(Endpoint.V1.CAR.FIND_RELATED_CARS_BY_NAME).permitAll()
                         .requestMatchers(Endpoint.V1.CHATBOT.CHAT).permitAll()
+                        .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_ALL_AVAILABLE).permitAll()
+                        .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_DETAILS_BY_ID).permitAll()
                         .requestMatchers(
                                 Endpoint.V1.CAR.MANUFACTURER,
                                 Endpoint.V1.CAR.MANUFACTURER + "/**",
@@ -74,6 +76,7 @@ public class SecurityConfig {
                         .requestMatchers(POST, Endpoint.V1.CAR.CAR_V2).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
                         //==> Các endpoint yêu cầu vai trò ADMIN
+                        .requestMatchers(Endpoint.V1.INVENTORY_CAR.ADMIN_PREFIX + "**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(Endpoint.V1.CAR.SPECIFICATIONS).hasAuthority("ROLE_ADMIN") // Bao gồm cả GET và POST
                         .requestMatchers(Endpoint.V1.PERMISSION.PERMISSION + "/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(Endpoint.V1.ROLE.ROLE + "/**").hasAuthority("ROLE_ADMIN")

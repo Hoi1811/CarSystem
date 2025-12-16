@@ -13,6 +13,7 @@ import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
 import web.car_system.Car_Service.domain.dto.inventory_car.CreateInventoryCarRequest;
 import web.car_system.Car_Service.domain.dto.inventory_car.InventoryCarDto;
+import web.car_system.Car_Service.domain.dto.inventory_car.UpdateSaleStatusRequest;
 import web.car_system.Car_Service.domain.entity.SaleStatus;
 import web.car_system.Car_Service.service.InventoryCarService;
 import web.car_system.Car_Service.utility.ResponseFactory;
@@ -66,8 +67,8 @@ public class InventoryCarController {
     }
 
     @PatchMapping(UPDATE_STATUS)
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, InventoryCarDto>> updateSaleStatus(@PathVariable Long id, @RequestParam SaleStatus newStatus) {
-        InventoryCarDto updatedCar = inventoryCarService.updateSaleStatus(id, newStatus);
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, InventoryCarDto>> updateSaleStatus(@PathVariable Long id, @RequestBody UpdateSaleStatusRequest request) {
+        InventoryCarDto updatedCar = inventoryCarService.updateSaleStatus(id, request.getSaleStatus());
         return ResponseFactory.success(updatedCar, "Cập nhật trạng thái bán hàng thành công", HttpStatus.OK);
     }
 
