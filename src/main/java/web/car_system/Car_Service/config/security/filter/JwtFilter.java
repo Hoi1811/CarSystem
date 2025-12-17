@@ -108,7 +108,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 Pair.of("/auth/register", "POST"),
                 Pair.of("/oauth2", "GET"),
                 Pair.of("chatbot", "POST"),
-                Pair.of("/options", "GET"),
+                Pair.of("v1/options", "GET"),
                 Pair.of("/schema", "GET"),
                 Pair.of("/suggestions", "GET"),
                 Pair.of("/paginated", "POST"),

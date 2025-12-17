@@ -7,6 +7,6 @@ import java.util.Optional;
 
 public interface AttributeRepository extends JpaRepository<Attribute, Integer> {
     Optional<Attribute> findByNameAndSpecificationSpecificationId(String name, Integer specificationId);
-
-
+    Optional<Attribute> findByName(String name);
+    boolean existsByName(String name);
 }

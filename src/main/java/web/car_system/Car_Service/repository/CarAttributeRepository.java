@@ -8,5 +8,6 @@ import java.util.List;
 public interface CarAttributeRepository extends JpaRepository<CarAttribute, CarAttributeId> {
     CarAttribute findByCarAndAttribute(Car car, Attribute attribute);
     List<CarAttribute> findByCarCarId(Integer carId);
+    boolean existsByAttribute_AttributeId(Integer attributeId);
 
 }

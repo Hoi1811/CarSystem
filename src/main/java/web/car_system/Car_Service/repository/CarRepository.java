@@ -19,6 +19,9 @@ public interface CarRepository extends JpaRepository<Car, Integer>, JpaSpecifica
 
     Optional<Car> findByNameAndModel(String name, String model);
 
+    @EntityGraph(attributePaths = {"carAttributes.attribute.specification", "carAttributes.attribute.comparisonRule"})
+    List<Car> findAllByCarIdIn(List<Integer> ids);
+
     // Sử dụng @EntityGraph để định nghĩa việc fetch
     @EntityGraph(attributePaths = {"carAttributes", "carAttributes.attribute"})
     Optional<Car> findById(Integer id);

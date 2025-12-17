@@ -5,6 +5,7 @@ import com.cloudinary.api.ApiResponse;
 import com.cloudinary.utils.ObjectUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -267,10 +268,89 @@ public class CarServiceImpl implements CarService {
             car.setOrigin(carRequest.origin());
         }
 
+
+//        Map<String, Specification> specMap = carDataCache.getSpecificationMap();
+//        Map<String, Attribute> attrMap = carDataCache.getAttributeMap();
+//
+//        List<CarAttribute> carAttributes = new ArrayList<>();
+//        for (var specRequest : carRequest.specifications()) {
+//            Specification specification = specMap.get(specRequest.name());
+//            if (specification == null) {
+//                specification = carDataCache.addSpecification(specRequest.name());
+//                specMap.put(specRequest.name(), specification); // Cập nhật cache thủ công
+//            }
+//
+//            for (var attrRequest : specRequest.attributes()) {
+//                String attrKey = attrRequest.name() + "_" + specification.getSpecificationId();
+//                Attribute attribute = attrMap.get(attrKey);
+//                if (attribute == null) {
+//                    attribute = carDataCache.addAttribute(attrRequest.name(), specification);
+//                    attrMap.put(attrKey, attribute); // Cập nhật cache thủ công
+//                }
+//
+//                CarAttribute carAttribute = new CarAttribute();
+//                carAttribute.setCar(car);
+//                carAttribute.setAttribute(attribute);
+//                carAttribute.setValue(attrRequest.value());
+//                carAttributes.add(carAttribute);
+//            }
+//        }
+//
+//        if (!carAttributes.isEmpty()) {
+//            carAttributeRepository.saveAll(carAttributes);
+//        }
+        List<CarAttribute> carAttributes = new ArrayList<>();
+        if (carRequest.specifications() != null) {
+            for (var specRequest : carRequest.specifications()) {
+                // 1. Tìm Specification trong DB. Nếu không có, báo lỗi.
+                Specification spec = specificationRepository.findByName(specRequest.name())
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                "Nhóm thông số '" + specRequest.name() + "' không tồn tại. Vui lòng tạo trước."));
+
+                if (specRequest.attributes() != null) {
+                    for (var attrRequest : specRequest.attributes()) {
+                        // 2. Tìm Attribute trong DB. Nếu không có, báo lỗi.
+                        Attribute attr = attributeRepository.findByName(attrRequest.name())
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                        "Thuộc tính '" + attrRequest.name() + "' không tồn tại. Vui lòng tạo trước."));
+
+                        // Kiểm tra xem Attribute có thực sự thuộc Specification đã cho không (tùy chọn nhưng nên có)
+                        if (!attr.getSpecification().getSpecificationId().equals(spec.getSpecificationId())) {
+                            throw new IllegalArgumentException("Thuộc tính '" + attr.getName() +
+                                    "' không thuộc nhóm thông số '" + spec.getName() + "'.");
+                        }
+
+                        // 3. Tạo CarAttribute với các ID đã được xác thực
+                        CarAttribute carAttribute = new CarAttribute();
+                        carAttribute.setId(new CarAttributeId(car.getCarId(), attr.getAttributeId()));
+                        carAttribute.setCar(car);
+
+
+                        carAttribute.setAttribute(attr);
+                        carAttribute.setValue(attrRequest.value());
+                        carAttributes.add(carAttribute);
+                    }
+                }
+            }
+        }
+
         populateVectorizedFields(car, carRequest.specifications());
-        // 2. Lưu xe lần đầu để lấy ID
-        car.setImages(new ArrayList<>()); // Khởi tạo danh sách trống
+
+        // Lưu xe và xử lý ảnh (giữ nguyên logic cũ của bạn)
+        car.setImages(new ArrayList<>());
         Car savedCar = carRepository.save(car);
+
+        // Gắn carId đã được sinh ra vào các CarAttribute
+        for(CarAttribute ca : carAttributes) {
+            ca.getId().setCarId(savedCar.getCarId());
+            ca.setCar(savedCar);
+        }
+
+        // Lưu carAttributes
+        if (!carAttributes.isEmpty()) {
+            carAttributeRepository.saveAll(carAttributes);
+        }
+
 
         // 3. Xử lý Upload ảnh và Thumbnail (phần được tối ưu)
         if (newImages != null && !newImages.isEmpty()) {
@@ -288,36 +368,6 @@ public class CarServiceImpl implements CarService {
             // Gán lại quan hệ và lưu lần nữa để cập nhật thumbnail
             savedCar.setImages(uploadedImages);
             carRepository.save(savedCar);
-        }
-        Map<String, Specification> specMap = carDataCache.getSpecificationMap();
-        Map<String, Attribute> attrMap = carDataCache.getAttributeMap();
-
-        List<CarAttribute> carAttributes = new ArrayList<>();
-        for (var specRequest : carRequest.specifications()) {
-            Specification specification = specMap.get(specRequest.name());
-            if (specification == null) {
-                specification = carDataCache.addSpecification(specRequest.name());
-                specMap.put(specRequest.name(), specification); // Cập nhật cache thủ công
-            }
-
-            for (var attrRequest : specRequest.attributes()) {
-                String attrKey = attrRequest.name() + "_" + specification.getSpecificationId();
-                Attribute attribute = attrMap.get(attrKey);
-                if (attribute == null) {
-                    attribute = carDataCache.addAttribute(attrRequest.name(), specification);
-                    attrMap.put(attrKey, attribute); // Cập nhật cache thủ công
-                }
-
-                CarAttribute carAttribute = new CarAttribute();
-                carAttribute.setCar(car);
-                carAttribute.setAttribute(attribute);
-                carAttribute.setValue(attrRequest.value());
-                carAttributes.add(carAttribute);
-            }
-        }
-
-        if (!carAttributes.isEmpty()) {
-            carAttributeRepository.saveAll(carAttributes);
         }
 
         Car updatedCar = carRepository.findById(car.getCarId())

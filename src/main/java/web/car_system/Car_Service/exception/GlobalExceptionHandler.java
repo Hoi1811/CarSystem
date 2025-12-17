@@ -1,11 +1,11 @@
 package web.car_system.Car_Service.exception;
 
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.log4j.Log4j2;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -62,15 +62,35 @@ public class GlobalExceptionHandler {
                         .data(null)
                         .build());
     }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<GlobalResponseDTO<?, ?>> handlNoJSONDataExceptions(Exception ex) {
-        log.error("Unexpected error: {}", ex.getMessage(), ex);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+    /**
+     * Handler cho các lỗi không tìm thấy tài nguyên (ví dụ: xe, người dùng...).
+     * Trả về mã lỗi 404 Not Found.
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<GlobalResponseDTO<?, ?>> handleEntityNotFoundException(EntityNotFoundException ex) {
+        log.warn("Resource not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body( // <-- Trả về 404
                 GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                         .meta(NoPaginatedMeta.builder()
                                 .status(Status.ERROR)
-                                .message("Thiếu dữ liệu JSON")
+                                .message(ex.getMessage()) // <-- Lấy message từ exception
+                                .build())
+                        .data(null)
+                        .build());
+    }
+
+    /**
+     * Handler cho các lỗi về trạng thái hoặc logic nghiệp vụ không hợp lệ.
+     * Trả về mã lỗi 400 Bad Request.
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<GlobalResponseDTO<?, ?>> handleIllegalStateException(IllegalStateException ex) {
+        log.warn("Illegal state: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( // <-- Trả về 400
+                GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                        .meta(NoPaginatedMeta.builder()
+                                .status(Status.ERROR)
+                                .message(ex.getMessage()) // <-- Lấy message từ exception
                                 .build())
                         .data(null)
                         .build());
