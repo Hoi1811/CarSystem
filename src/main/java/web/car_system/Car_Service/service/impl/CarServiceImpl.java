@@ -370,9 +370,8 @@ public class CarServiceImpl implements CarService {
             carRepository.save(savedCar);
         }
 
-        Car updatedCar = carRepository.findById(car.getCarId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found"));
-        return CarMapper.INSTANCE.toCarDetailsResponse(updatedCar);
+        // Sử dụng savedCar trực tiếp thay vì query lại từ DB (car đã trong persistence context)
+        return CarMapper.INSTANCE.toCarDetailsResponse(savedCar);
     }
     private List<Image> uploadImagesConcurrently(Car car, List<MultipartFile> files) throws Exception {
         // 1. Tạo một ExecutorService đặc biệt: Mỗi tác vụ sẽ được gán một Virtual Thread mới.
@@ -552,7 +551,7 @@ public class CarServiceImpl implements CarService {
                 filter.limit(),
                 sort
         );
-        // Tìm kiếm với specification
+        // Tìm kiếm với specification - sử dụng findAllWithCarTypes để fetch carTypes eagerly, tránh N+1 query
         Page<Car> carPage = carRepository.findAll(CarSpecification.withFilters(filter), pageRequest);
 
         // Map sang DTO
@@ -978,8 +977,13 @@ public class CarServiceImpl implements CarService {
 
     @Override
     public GlobalResponseDTO<NoPaginatedMeta, List<CarDetailsResponseDTO>> compareCars(CompareCarsRequestDTO compareCarsRequestDTO) {
-        List<CarDetailsResponseDTO> carDetailsResponseDTOS = compareCarsRequestDTO.ids().stream()
-                .map(id ->  CarMapper.INSTANCE.toCarDetailsResponse(carRepository.findById(id).orElseThrow(() -> new NotFoundException("Không tìm thấy xe có id = " + id))) )
+        // Sử dụng batch query thay vì findById từng xe một để tránh N+1 query
+        List<Car> cars = carRepository.findAllByCarIdIn(compareCarsRequestDTO.ids());
+        if (cars.size() != compareCarsRequestDTO.ids().size()) {
+            throw new NotFoundException("Một hoặc nhiều xe không tồn tại trong danh sách so sánh");
+        }
+        List<CarDetailsResponseDTO> carDetailsResponseDTOS = cars.stream()
+                .map(CarMapper.INSTANCE::toCarDetailsResponse)
                 .toList();
         if(carDetailsResponseDTOS.isEmpty()){
             return GlobalResponseDTO.<NoPaginatedMeta, List<CarDetailsResponseDTO>>builder()

@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.util.Pair;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,44 +30,47 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        if (isTokenBypass(request)) {
+
+        // 1. Cố gắng lấy token từ request
+        String token = resolveToken(request);
+
+        // 2. Nếu KHÔNG có token:
+        // Cho request đi tiếp. Nếu URL này cần bảo mật, SecurityConfig sẽ chặn lại và trả về 403.
+        // Nếu URL này là public (permitAll), SecurityConfig sẽ cho qua.
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = resolveToken(request);
-        if (token == null) {
-            log.error("Missing token for request: {}", request.getServletPath());
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing token");
-            return;
-        }
-
+        // 3. Nếu CÓ token: Thực hiện xác thực
         try {
             // Parse JWT và lấy claims
             Claims claims = jwtTokenUtil.extractAllClaims(token);
             String userId = claims.getSubject();
             String jti = claims.get("jti", String.class);
 
-            // Kiểm tra token có bị thu hồi không
+            // Kiểm tra token có bị thu hồi (Logout/Revoked) không trong Redis
             String revokedKey = "revoked_token:" + jti;
             if (Boolean.TRUE.equals(redisTemplate.hasKey(revokedKey))) {
+                // Token đã bị thu hồi -> Trả lỗi ngay lập tức
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has been revoked");
                 return;
             }
 
-            // Lấy roles và permissions từ JWT nếu có
+            // Lấy roles và permissions từ JWT
             @SuppressWarnings("unchecked")
             List<String> roles = (List<String>) claims.get("roles");
             @SuppressWarnings("unchecked")
             List<String> permissions = (List<String>) claims.get("permissions");
 
-            // Nếu JWT không chứa roles/permissions, truy vấn Redis
+            // Nếu JWT không chứa roles/permissions (trường hợp dùng stateful hoặc token cũ), fallback sang Redis
             if (roles == null || permissions == null) {
                 String redisKey = "user:auth:" + userId;
                 roles = (List<String>) redisTemplate.opsForHash().get(redisKey, "roles");
                 permissions = (List<String>) redisTemplate.opsForHash().get(redisKey, "permissions");
 
                 if (roles == null || permissions == null) {
+                    // Không tìm thấy quyền hạn -> coi như không hợp lệ
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authorities not found");
                     return;
                 }
@@ -76,58 +78,38 @@ public class JwtFilter extends OncePerRequestFilter {
 
             // Kết hợp roles và permissions thành authorities
             List<SimpleGrantedAuthority> authorities = roles.stream()
-                    .map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList());
+                                                            .map(SimpleGrantedAuthority::new)
+                                                            .collect(Collectors.toList());
             authorities.addAll(permissions.stream()
-                    .map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList()));
+                                          .map(SimpleGrantedAuthority::new)
+                                          .collect(Collectors.toList()));
 
-            // Đưa vào SecurityContext
+            // Thiết lập Authentication vào SecurityContext
             UsernamePasswordAuthenticationToken auth =
                     new UsernamePasswordAuthenticationToken(userId, null, authorities);
+
+            // Có thể set thêm details nếu cần: auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-            // Chuyển request đến controller
-            filterChain.doFilter(request, response);
         } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token: " + e.getMessage());
-        }
-    }
+            // Nếu token sai format, hết hạn, hoặc key không đúng...
+            log.error("Cannot set user authentication: {}", e.getMessage());
 
-    private boolean isTokenBypass(HttpServletRequest request) {
-        final List<Pair<String, String>> bypassTokens = List.of(
-                Pair.of("/paginated", "POST"),
-                Pair.of("/manufacturers", "GET"),
-                Pair.of("/car-types", "GET"),
-                Pair.of("/car-segment-groups", "GET"),
-                Pair.of("/car-segments", "GET"),
-                Pair.of("/authorities", "GET"),
-                Pair.of("/auth/login", "POST"),
-                Pair.of("/auth/refresh", "POST"),
-                Pair.of("/auth/logout", "POST"),
-                Pair.of("/auth/register", "POST"),
-                Pair.of("/oauth2", "GET"),
-                Pair.of("chatbot", "POST"),
-                Pair.of("v1/options", "GET"),
-                Pair.of("/schema", "GET"),
-                Pair.of("/suggestions", "GET"),
-                Pair.of("/paginated", "POST"),
-                Pair.of("/cars", "GET"),
-                Pair.of("/images", "GET"),
-                Pair.of("/related-cars", "POST"),
-                Pair.of("/compare-cars", "POST"),
-                Pair.of("/ai/suggest", "POST")
-        );
-        for (Pair<String, String> bypassToken : bypassTokens) {
-            if (request.getServletPath().contains(bypassToken.getFirst())
-                    && request.getMethod().equals(bypassToken.getSecond())) {
-                return true;
-            }
+            // Xóa context để đảm bảo an toàn
+            SecurityContextHolder.clearContext();
+
+            // Trả về lỗi 401 Unauthorized để Client biết token không hợp lệ
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token: " + e.getMessage());
+            return;
         }
-        return false;
+
+        // 4. Cho request đi tiếp (với SecurityContext đã được set nếu token hợp lệ)
+        filterChain.doFilter(request, response);
     }
 
     private String resolveToken(HttpServletRequest request) {
+        // Fallback: Lấy từ Cookie (nếu hệ thống của bạn hỗ trợ cả cookie)
         if (request.getCookies() != null) {
             for (var cookie : request.getCookies()) {
                 if ("accessToken".equals(cookie.getName())) {

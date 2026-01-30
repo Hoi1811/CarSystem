@@ -92,7 +92,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             // 4. Lọc theo Status (Chỉ lấy xe VISIBLE - Đã hiển thị)
             // Dữ liệu bạn gửi có cột status: 'DRAFT' hoặc 'VISIBLE'
             // Mặc định nên lọc VISIBLE để tránh hiện xe nháp
-            predicates.add(criteriaBuilder.equal(root.get("status"), "VISIBLE"));
+//            predicates.add(criteriaBuilder.equal(root.get("status"), "VISIBLE"));
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };

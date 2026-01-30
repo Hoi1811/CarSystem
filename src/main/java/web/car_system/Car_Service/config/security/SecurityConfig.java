@@ -48,6 +48,7 @@ public class SecurityConfig {
                                 Endpoint.V1.AUTH.REFRESH_TOKEN,
                                 Endpoint.V1.AUTH.LOGOUT
                         ).permitAll()
+                        .requestMatchers("actualtor/**").permitAll()
                         .requestMatchers(Endpoint.V1.OPTIONS.OPTIONS_BY_SOURCE_NAME).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.SPECIFICATIONS_SCHEMA).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.CAR_ID_SUGGESTIONS).permitAll()
@@ -57,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.CHATBOT.CHAT).permitAll()
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_ALL_AVAILABLE).permitAll()
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_DETAILS_BY_ID).permitAll()
+                        .requestMatchers(Endpoint.V1.RECOMMENDATION.GET_SUGGESTIONS).permitAll()
+                        .requestMatchers(Endpoint.V1.LEAD.SUBMIT_LEAD).permitAll()
                         .requestMatchers(
                                 Endpoint.V1.CAR.MANUFACTURER,
                                 Endpoint.V1.CAR.MANUFACTURER + "/**",
