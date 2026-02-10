@@ -86,13 +86,24 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.USER.USER + "/**").hasAuthority("ROLE_ADMIN")
                         // THÊM MỚI: Yêu cầu quyền ADMIN cho tất cả API về ATTRIBUTE
                         .requestMatchers(Endpoint.V1.ATTRIBUTE.ATTRIBUTE_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
+                        // SALES ORDER: Admin management
+                        .requestMatchers(Endpoint.V1.SALES_ORDER.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
+                        // ANALYTICS: Admin only
+                        .requestMatchers(Endpoint.V1.ANALYTICS.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
 
                         .requestMatchers(GET, Endpoint.V1.UTIL.GET_CONTROL_TYPES).hasAnyAuthority("ROLE_ADMIN")
                         //
                         .requestMatchers(Endpoint.V1.COMPARISON_RULE.GET_ALL + "/**").hasAuthority("ROLE_ADMIN")
+                        
+                        // PUBLIC: Order tracking (no auth required)
+                        .requestMatchers(Endpoint.V1.SALES_ORDER.TRACK_ORDER).permitAll()
 
                         //==> Các endpoint yêu cầu xác thực (đã đăng nhập)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Luôn cho phép yêu cầu OPTIONS
+                        
+                        // Swagger / OpenAPI documentation - public access
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
+                        
                         .requestMatchers(GET, Endpoint.V1.AUTH.VALIDATE_ADMIN).authenticated()
 
                         //==> Tất cả các yêu cầu còn lại đều cần xác thực

@@ -146,6 +146,7 @@ public class Endpoint {
             // === ADMIN ENDPOINTS (Dành cho Quản trị viên) ===
             public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/test-drive-appointments";
             public static final String GET_ALL = ADMIN_PREFIX;                 // GET (có phân trang)
+            public static final String SEARCH = ADMIN_PREFIX + "/search";      // GET (tìm kiếm với filter)
             public static final String GET_BY_ID = ADMIN_PREFIX + "/{id}";    // GET
             public static final String UPDATE = ADMIN_PREFIX + "/{id}";       // PUT (để xác nhận, gán việc, ghi chú)
             public static final String DELETE = ADMIN_PREFIX + "/{id}";       // DELETE
@@ -158,6 +159,7 @@ public class Endpoint {
             // === ADMIN ENDPOINTS (Dành cho Quản trị viên) ===
             public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/leads";
             public static final String GET_ALL = ADMIN_PREFIX;                 // GET (có phân trang)
+            public static final String SEARCH = ADMIN_PREFIX + "/search";      // GET (tìm kiếm với filter)
             public static final String GET_BY_ID = ADMIN_PREFIX + "/{id}";    // GET
             public static final String UPDATE = ADMIN_PREFIX + "/{id}";       // PUT (để gán việc, cập nhật trạng thái)
             public static final String DELETE = ADMIN_PREFIX + "/{id}";       // DELETE
@@ -183,5 +185,35 @@ public class Endpoint {
             public static final String UPDATE = ADMIN_PREFIX + "/{id}";     // PUT
             public static final String DELETE = ADMIN_PREFIX + "/{id}";     // DELETE
         }
+        
+        // Sales Order Management
+        public static final class SALES_ORDER {
+            public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/sales-orders";
+            public static final String PUBLIC_PREFIX = V1.PREFIX + "/orders";
+            
+            // Admin endpoints
+            public static final String CREATE_ORDER = ADMIN_PREFIX;                 // POST
+            public static final String GET_ALL_ORDERS = ADMIN_PREFIX;               // GET
+            public static final String GET_ORDER_BY_ID = ADMIN_PREFIX + "/{id}";    // GET
+            public static final String UPDATE_ORDER = ADMIN_PREFIX + "/{id}";       // PUT
+            public static final String DELETE_ORDER = ADMIN_PREFIX + "/{id}";       // DELETE
+            public static final String CANCEL_ORDER = ADMIN_PREFIX + "/{id}/cancel"; // POST
+            public static final String UPDATE_STATUS = ADMIN_PREFIX + "/{id}/status"; // PATCH
+            
+            // Public endpoint
+            public static final String TRACK_ORDER = PUBLIC_PREFIX + "/track";      // GET
+        }
+        
+        // Analytics & Business Intelligence
+        public static final class ANALYTICS {
+            public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/analytics";
+            
+            // Dashboard endpoints
+            public static final String DASHBOARD = ADMIN_PREFIX + "/dashboard";                     // GET
+            public static final String MONTHLY_REVENUE = ADMIN_PREFIX + "/revenue/monthly";         // GET
+            public static final String STATUS_DISTRIBUTION = ADMIN_PREFIX + "/orders/status-distribution"; // GET
+            public static final String SYSTEM_HEALTH = ADMIN_PREFIX + "/system/health";             // GET
+        }
     }
 }
+

@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,8 +46,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Override
     @Transactional(readOnly = true)
-    // THAY ĐỔI: Kiểu trả về là CarResponseDTO
-    public List<CarResponseDTO> findSuggestions(RecommendationRequest request) {
+    public Page<CarResponseDTO> findSuggestions(RecommendationRequest request, Pageable pageable) {
         List<RecommendationRule> activeRules = ruleRepository.findAllByIsActiveTrue();
 
         for (RecommendationRule rule : activeRules) {
@@ -52,8 +54,8 @@ public class RecommendationServiceImpl implements RecommendationService {
                 JsonNode conditionsNode = objectMapper.readTree(rule.getConditionsJson());
                 if (matches(request.getCriteria(), conditionsNode)) {
                     JsonNode suggestionNode = objectMapper.readTree(rule.getSuggestionJson());
-                    // GỌI PHƯƠNG THỨC HELPER MỚI
-                    return findCarTemplatesBySuggestion(suggestionNode);
+                    // GỌI PHƯƠNG THỨC HELPER MỚI VỚI PAGINATION
+                    return findCarTemplatesBySuggestionPaginated(suggestionNode, pageable);
                 }
             } catch (Exception e) {
                 // Ghi log
@@ -61,65 +63,77 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
-        return List.of(); // Trả về danh sách rỗng
+        // Trả về Page rỗng nếu không match rule nào
+        return Page.empty(pageable);
     }
-    private List<CarResponseDTO> findCarTemplatesBySuggestion(JsonNode suggestionNode) {
-        Specification<Car> spec = (root, query, criteriaBuilder) -> {
+    
+    /**
+     * Helper method với pagination support
+     */
+    private Page<CarResponseDTO> findCarTemplatesBySuggestionPaginated(JsonNode suggestionNode, Pageable pageable) {
+        // Build Specification như cũ
+        Specification<Car> spec = buildCarSpecification(suggestionNode);
+        
+        // Tìm tất cả cars matching (chưa phân trang)
+        List<Car> allMatchingCars = carRepository.findAll(spec);
+        
+        // Deduplicate cars by name và map to DTO
+        List<CarResponseDTO> uniqueCars = allMatchingCars.stream()
+                .map(carMapper::toCarResponseDTO)
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                dto -> dto.name(), // Key: Tên xe
+                                dto -> dto,        // Value: DTO
+                                (existing, replacement) -> {
+                                    // Ưu tiên xe có thumbnail
+                                    if (existing.thumbnail() == null && replacement.thumbnail() != null) {
+                                        return replacement;
+                                    }
+                                    return existing;
+                                },
+                                LinkedHashMap::new // Giữ thứ tự
+                        ),
+                        map -> new ArrayList<>(map.values())
+                ));
+        
+        // Manual pagination
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), uniqueCars.size());
+        
+        List<CarResponseDTO> pageContent = start >= uniqueCars.size() ? 
+            Collections.emptyList() : 
+            uniqueCars.subList(start, end);
+        
+        return new PageImpl<>(pageContent, pageable, uniqueCars.size());
+    }
+    
+    /**
+     * Extract Specification building logic
+     */
+    private Specification<Car> buildCarSpecification(JsonNode suggestionNode) {
+        return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             // 1. Lọc theo Hãng xe (Manufacturer ID)
-            // Dựa vào dữ liệu: manufacturer_id = 35
             if (suggestionNode.has("manufacturer_id")) {
                 int manufId = suggestionNode.get("manufacturer_id").asInt();
-                // Giả định Entity Car có quan hệ: @ManyToOne Manufacturer manufacturer;
                 predicates.add(criteriaBuilder.equal(root.get("manufacturer").get("id"), manufId));
             }
 
             // 2. Lọc theo Loại động cơ (Engine Type)
-            // Dựa vào dữ liệu: cột engine_type, giá trị 'ELECTRIC'
             if (suggestionNode.has("engine_type")) {
                 String engineType = suggestionNode.get("engine_type").asText();
-                predicates.add(criteriaBuilder.equal(root.get("engineType"), engineType)); // Chú ý: tên field trong Entity Java thường là camelCase (engineType)
+                predicates.add(criteriaBuilder.equal(root.get("engineType"), engineType));
             }
 
             // 3. Lọc theo Giá (Price)
             if (suggestionNode.has("max_price")) {
-                // Dữ liệu bạn gửi price dạng số (ví dụ 529000000.00)
                 BigDecimal maxPrice = new BigDecimal(suggestionNode.get("max_price").asText());
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
             }
 
-            // 4. Lọc theo Status (Chỉ lấy xe VISIBLE - Đã hiển thị)
-            // Dữ liệu bạn gửi có cột status: 'DRAFT' hoặc 'VISIBLE'
-            // Mặc định nên lọc VISIBLE để tránh hiện xe nháp
-//            predicates.add(criteriaBuilder.equal(root.get("status"), "VISIBLE"));
-
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
-
-        List<Car> foundCars = carRepository.findAll(spec);
-        return foundCars.stream()
-                .map(carMapper::toCarResponseDTO)
-                .collect(Collectors.collectingAndThen(
-                        Collectors.toMap(
-                                dto -> dto.name(), // Key để so sánh: Tên xe
-                                dto -> dto,           // Value: Chính là object DTO
-                                (existing, replacement) -> {
-                                    // LOGIC QUYẾT ĐỊNH KHI GẶP XE TRÙNG TÊN:
-                                    // Nếu xe đã có (existing) chưa có ảnh, mà xe mới (replacement) lại có ảnh
-                                    // -> Thì lấy xe mới. Ngược lại giữ nguyên xe cũ.
-                                    if (existing.thumbnail() == null && replacement.thumbnail() != null) {
-                                        return replacement;
-                                    }
-                                    // Bạn có thể thêm logic: Lấy xe giá rẻ hơn
-                                    // if (replacement.getPrice().compareTo(existing.getPrice()) < 0) return replacement;
-
-                                    return existing; // Mặc định: Giữ xe đầu tiên tìm thấy
-                                },
-                                LinkedHashMap::new // Dùng LinkedHashMap để giữ thứ tự sắp xếp ban đầu
-                        ),
-                        map -> new ArrayList<>(map.values()) // Chuyển Map Values về lại List
-                ));
     }
 
     // Helper method để kiểm tra sự trùng khớp

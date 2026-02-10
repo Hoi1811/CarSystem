@@ -4,8 +4,10 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import web.car_system.Car_Service.domain.dto.test_drive.TestDriveFilterRequest;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.CreateTestDriveAppointmentRequest;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.TestDriveAppointmentDto;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.UpdateTestDriveAppointmentRequest;
@@ -15,6 +17,7 @@ import web.car_system.Car_Service.repository.InventoryCarRepository;
 import web.car_system.Car_Service.repository.TestDriveAppointmentRepository;
 import web.car_system.Car_Service.repository.UserRepository;
 import web.car_system.Car_Service.service.TestDriveAppointmentService;
+import web.car_system.Car_Service.specification.TestDriveSpecification;
 
 @Service
 @RequiredArgsConstructor
@@ -54,16 +57,23 @@ public class TestDriveAppointmentServiceImpl implements TestDriveAppointmentServ
     @Override
     @Transactional(readOnly = true)
     public Page<TestDriveAppointmentDto> getAllAppointments(Pageable pageable) {
-        Page<TestDriveAppointment> appointmentPage = appointmentRepository.findAll(pageable);
-        return appointmentPage.map(appointmentMapper::toDto);
+        return appointmentRepository.findAll(pageable)
+                .map(appointmentMapper::toDto);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TestDriveAppointmentDto> searchAppointments(TestDriveFilterRequest filter, Pageable pageable) {
+        Specification<TestDriveAppointment> spec = TestDriveSpecification.buildSpec(filter);
+        return appointmentRepository.findAll(spec, pageable).map(appointmentMapper::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public TestDriveAppointmentDto getAppointmentById(Long id) {
-        TestDriveAppointment appointment = appointmentRepository.findById(id)
+        return appointmentRepository.findById(id)
+                .map(appointmentMapper::toDto)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lịch hẹn với ID: " + id));
-        return appointmentMapper.toDto(appointment);
     }
 
     @Override

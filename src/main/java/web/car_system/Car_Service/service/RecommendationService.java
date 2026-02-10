@@ -1,5 +1,7 @@
 package web.car_system.Car_Service.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import web.car_system.Car_Service.domain.dto.car.CarResponseDTO;
 import web.car_system.Car_Service.domain.dto.inventory_car.InventoryCarDto;
 import web.car_system.Car_Service.domain.dto.recommendation.CreateOrUpdateRuleRequest;
@@ -13,11 +15,12 @@ public interface RecommendationService {
     // === Nghiệp vụ cho Khách hàng ===
 
     /**
-     * Tìm kiếm và trả về danh sách xe được gợi ý dựa trên các tiêu chí của người dùng.
+     * Tìm kiếm và trả về danh sách xe được gợi ý dựa trên các tiêu chí của người dùng (Có phân trang).
      * @param request Chứa một map các tiêu chí.
-     * @return Danh sách các xe (InventoryCarDto) phù hợp.
+     * @param pageable Thông tin phân trang (page, size, sort).
+     * @return Page chứa danh sách các xe (CarResponseDTO) phù hợp.
      */
-    List<CarResponseDTO> findSuggestions(RecommendationRequest request);
+    Page<CarResponseDTO> findSuggestions(RecommendationRequest request, Pageable pageable);
 
 
     // === Nghiệp vụ cho Admin (CRUD các Rule) ===

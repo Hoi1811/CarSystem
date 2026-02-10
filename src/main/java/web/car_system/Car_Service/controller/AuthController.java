@@ -2,6 +2,7 @@ package web.car_system.Car_Service.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
 import web.car_system.Car_Service.service.AuthService;
+import web.car_system.Car_Service.service.FailedLoginAttemptService;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -29,6 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final FailedLoginAttemptService attemptService;
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Value("${app.frontend.oauth_redirect_uri:http://localhost:4200/auth/oauth2/processing}")
@@ -88,48 +91,75 @@ public class AuthController {
 
     @PostMapping(Endpoint.V1.AUTH.REGISTER)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> register(
-            @RequestBody RegisterRequestDTO request,
+            @Valid @RequestBody RegisterRequestDTO request,
             HttpServletResponse response) {
         try {
             authService.registerLocalUser(request.username(), request.password(), request.email());
-            authService.loginLocalUser(request.username(), request.password(),request.rememberMe(), response);
-
+            // Auto-login removed - better UX to redirect to login page
             return ResponseEntity.ok(GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                     .meta(NoPaginatedMeta.builder()
                             .status(Status.SUCCESS)
-                            .message("Register Success")
+                            .message("Đăng ký thành công. Vui lòng đăng nhập.")
                             .build())
                     .build());
         } catch (Exception e) {
+            // Log detailed error for debugging, but return generic message to user
+            logger.error("Registration failed for username: {}", request.username(), e);
             return ResponseEntity.badRequest().body(
                     GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                             .meta(NoPaginatedMeta.builder()
                                     .status(Status.ERROR)
-                                    .message("Register Error: " + e.getMessage())
+                                    .message("Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.")
                                     .build())
                             .build());
-
         }
     }
 
     @PostMapping(Endpoint.V1.AUTH.LOGIN)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> login(
-            @RequestBody LoginRequestDTO request,
+            @Valid @RequestBody LoginRequestDTO request,
+            HttpServletRequest httpRequest,
             HttpServletResponse response) {
+        
+        String clientIP = getClientIP(httpRequest);
+        String loginKey = clientIP + ":" + request.username();
+        
+        // Check if IP/username combo is blocked
+        if (attemptService.isBlocked(loginKey)) {
+            long remainingMinutes = attemptService.getRemainingBlockTime(loginKey);
+            logger.warn("Blocked login attempt from: {}", clientIP);
+            return ResponseEntity.status(429).body(
+                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                            .meta(NoPaginatedMeta.builder()
+                                    .status(Status.ERROR)
+                                    .message(String.format("Quá nhiều lần thử. Vui lòng đợi %d phút.", remainingMinutes))
+                                    .build())
+                            .build());
+        }
+        
         try {
-            authService.loginLocalUser(request.username(), request.password(),request.rememberMe(), response);
+            authService.loginLocalUser(request.username(), request.password(), request.rememberMe(), response);
+            
+            // Reset failed attempts counter on successful login
+            attemptService.loginSucceeded(loginKey);
+            
             return ResponseEntity.ok(GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                     .meta(NoPaginatedMeta.builder()
                             .status(Status.SUCCESS)
-                            .message("Login Success")
+                            .message("Đăng nhập thành công")
                             .build())
                     .build());
         } catch (Exception e) {
+            // Increment failed attempts counter
+            attemptService.loginFailed(loginKey);
+            
+            // Log failed attempt with details, but return generic message
+            logger.warn("Login failed for username: {} from IP: {}", request.username(), clientIP);
             return ResponseEntity.status(401).body(
                     GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                             .meta(NoPaginatedMeta.builder()
                                     .status(Status.ERROR)
-                                    .message("Login Error: " + e.getMessage())
+                                    .message("Tên đăng nhập hoặc mật khẩu không đúng")
                                     .build())
                             .build());
         }
@@ -159,25 +189,28 @@ public class AuthController {
 
     @PostMapping(Endpoint.V1.AUTH.REFRESH_TOKEN)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> refresh(
-            @CookieValue("refreshToken") String refreshToken,
+            @CookieValue(value = "refreshToken", required = false) String refreshToken,
             HttpServletResponse response) {
         try {
+            if (refreshToken == null || refreshToken.isBlank()) {
+                throw new IllegalArgumentException("Refresh token không hợp lệ");
+            }
             authService.refreshToken(refreshToken, response);
             return ResponseEntity.ok(GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                     .meta(NoPaginatedMeta.builder()
                             .status(Status.SUCCESS)
-                            .message("Register Success")
+                            .message("Làm mới token thành công")
                             .build())
                     .build());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(
+            logger.error("Token refresh failed", e);
+            return ResponseEntity.status(401).body(
                     GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                             .meta(NoPaginatedMeta.builder()
                                     .status(Status.ERROR)
-                                    .message("Register Error: " + e.getMessage())
+                                    .message("Làm mới token thất bại")
                                     .build())
                             .build());
-
         }
     }
 
@@ -202,5 +235,18 @@ public class AuthController {
                             .build());
 
         }
+    }
+
+    /**
+     * Lấy IP address của client
+     * Handle cả trường hợp có proxy (X-Forwarded-For header)
+     */
+    private String getClientIP(HttpServletRequest request) {
+        String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader != null && !xfHeader.isEmpty()) {
+            // Lấy IP đầu tiên trong chain (real client IP)
+            return xfHeader.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

@@ -11,6 +11,7 @@ import web.car_system.Car_Service.annotation.RestApiV1;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
+import web.car_system.Car_Service.domain.dto.test_drive.TestDriveFilterRequest;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.CreateTestDriveAppointmentRequest;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.TestDriveAppointmentDto;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.UpdateTestDriveAppointmentRequest;
@@ -42,6 +43,18 @@ public class TestDriveAppointmentController {
     public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<TestDriveAppointmentDto>>> getAllAppointments(Pageable pageable) {
         Page<TestDriveAppointmentDto> appointmentPage = appointmentService.getAllAppointments(pageable);
         return successPageable(appointmentPage, "Lấy danh sách lịch hẹn thành công.");
+    }
+    
+    /**
+     * Search/filter test drive appointments với các tiêu chí phức tạp
+     * Sử dụng GET với query parameters
+     */
+    @GetMapping(SEARCH)
+    public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<TestDriveAppointmentDto>>> searchAppointments(
+            @ModelAttribute TestDriveFilterRequest filter,
+            Pageable pageable) {
+        Page<TestDriveAppointmentDto> appointmentPage = appointmentService.searchAppointments(filter, pageable);
+        return successPageable(appointmentPage, "Tìm kiếm lịch hẹn lái thử thành công.");
     }
 
     @GetMapping(GET_BY_ID)

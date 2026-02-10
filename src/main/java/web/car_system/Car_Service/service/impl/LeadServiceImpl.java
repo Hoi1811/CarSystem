@@ -4,10 +4,12 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import web.car_system.Car_Service.domain.dto.lead.CreateLeadRequest;
 import web.car_system.Car_Service.domain.dto.lead.LeadDto;
+import web.car_system.Car_Service.domain.dto.lead.LeadFilterRequest;
 import web.car_system.Car_Service.domain.dto.lead.UpdateLeadRequest;
 import web.car_system.Car_Service.domain.entity.InventoryCar;
 import web.car_system.Car_Service.domain.entity.Lead;
@@ -18,6 +20,7 @@ import web.car_system.Car_Service.repository.InventoryCarRepository;
 import web.car_system.Car_Service.repository.LeadRepository;
 import web.car_system.Car_Service.repository.UserRepository;
 import web.car_system.Car_Service.service.LeadService;
+import web.car_system.Car_Service.specification.LeadSpecification;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +52,13 @@ public class LeadServiceImpl implements LeadService {
     @Transactional(readOnly = true)
     public Page<LeadDto> getAllLeads(Pageable pageable) {
         return leadRepository.findAll(pageable).map(leadMapper::toDto);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LeadDto> searchLeads(LeadFilterRequest filter, Pageable pageable) {
+        Specification<Lead> spec = LeadSpecification.buildSpec(filter);
+        return leadRepository.findAll(spec, pageable).map(leadMapper::toDto);
     }
 
     @Override

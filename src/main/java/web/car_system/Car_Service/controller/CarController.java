@@ -24,6 +24,7 @@ import web.car_system.Car_Service.domain.entity.Image;
 import web.car_system.Car_Service.domain.entity.Specification;
 import web.car_system.Car_Service.service.*;
 import web.car_system.Car_Service.service.impl.CarServiceImpl;
+import web.car_system.Car_Service.utility.FileValidationUtil;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -44,6 +45,7 @@ public class CarController {
     private final AttributeService attributeService;
     private final ComparisonService comparisonService;
     private final RegionalFeeService regionalFeeService;
+    private final FileValidationUtil fileValidationUtil;
 
     @PatchMapping(CHANGE_CAR_STATUS)
     public ResponseEntity<?> updateCarStatus(
@@ -125,20 +127,20 @@ public class CarController {
                         .build());
     }
     @PostMapping(Endpoint.V1.CAR.FIND_RELATED_CARS_BY_NAME)
-    public ResponseEntity<GlobalResponseDTO<?,?>> findRelatedCarsByName(@RequestBody FindRelatedCarsRequestDTO requestDTO){
+    public ResponseEntity<GlobalResponseDTO<?,?>> findRelatedCarsByName(@Valid @RequestBody FindRelatedCarsRequestDTO requestDTO){
         return ResponseEntity.status(HttpStatus.OK).body(carService.findRelatedCarsByName(requestDTO));
     }
     @PostMapping(Endpoint.V1.CAR.FIND_RELATED_MODELS_BY_NAME)
-    public ResponseEntity<GlobalResponseDTO<?,?>> findRelatedModelsByName(@RequestBody FindRelatedCarsRequestDTO requestDTO){
+    public ResponseEntity<GlobalResponseDTO<?,?>> findRelatedModelsByName(@Valid @RequestBody FindRelatedCarsRequestDTO requestDTO){
         return ResponseEntity.status(HttpStatus.OK).body(carService.findRelatedModelsByCarName(requestDTO));
     }
     @PostMapping(Endpoint.V1.CAR.FIND_RELATED_CAR_NAMES_BY_NAME)
-    public ResponseEntity<GlobalResponseDTO<?,?>> findRelatedCarNamesByName(@RequestBody FindRelatedCarsRequestDTO requestDTO){
+    public ResponseEntity<GlobalResponseDTO<?,?>> findRelatedCarNamesByName(@Valid @RequestBody FindRelatedCarsRequestDTO requestDTO){
         return ResponseEntity.status(HttpStatus.OK).body(carService.findRelatedCarNamesByCarName(requestDTO));
     }
     @PostMapping(Endpoint.V1.CAR.COMPARE_CARS)
     public ResponseEntity<GlobalResponseDTO<?, ComparisonResultDTO>> compareCars(
-            @RequestBody CompareCarsRequestDTO requestDTO) {
+            @Valid @RequestBody CompareCarsRequestDTO requestDTO) {
 
         List<Integer> carIds = requestDTO.ids();
         ComparisonResultDTO result = comparisonService.compareCars(carIds);
@@ -154,28 +156,20 @@ public class CarController {
         return ResponseEntity.ok(response);
     }
     @PostMapping(Endpoint.V1.CAR.CAR)
-    public ResponseEntity<GlobalResponseDTO<?, ?>> createCar(@RequestBody AddCarRequestDTO carRequest) {
+    public ResponseEntity<GlobalResponseDTO<?, ?>> createCar(@Valid @RequestBody AddCarRequestDTO carRequest) {
         return ResponseEntity.status(HttpStatus.CREATED).body(carService.createCar(carRequest));
     }
 
     @PostMapping(value = Endpoint.V1.CAR.CAR_V2, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GlobalResponseDTO<?, ?>> createCarV2(
             // Part 1: Chứa toàn bộ dữ liệu JSON (đã bỏ MultipartFile)
-            @RequestPart("carRequest") AddCarRequestDTO carRequest,
+            @Valid @RequestPart("carRequest") AddCarRequestDTO carRequest,
 
             // Part 2: Chứa các file ảnh (Đổi tên thành 'newImages' cho nhất quán)
             @RequestPart("newImages") List<MultipartFile> newImages)  {
 
-        if (newImages == null || newImages.isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
-                            .meta(NoPaginatedMeta.builder()
-                                    .status(Status.ERROR)
-                                    .message("Required part 'images' is not present")
-                                    .build())
-                            .data(null)
-                            .build());
-        }
+        // ✅ Validate images before processing
+        fileValidationUtil.validateImages(newImages);
 
         GlobalResponseDTO<?, CarDetailsResponseDTO> response = carService.createCarV2(carRequest, newImages);
 
@@ -224,9 +218,15 @@ public class CarController {
     @PutMapping(value = Endpoint.V1.CAR.CAR_ID, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GlobalResponseDTO<?, ?>> updateCar(
             @PathVariable Integer id,
-            @RequestPart("updateRequest") UpdateCarRequestDTO updateRequest, // <-- Dùng DTO mới
-            @RequestPart(name = "newImages", required = false) List<MultipartFile> newImages) {
-        GlobalResponseDTO<?, CarDetailsResponseDTO> response = carService.updateCar(id, updateRequest, newImages);
+            @Valid @RequestPart("carRequest") UpdateCarRequestDTO carRequest,
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages
+    ) {
+        // ✅ Validate new images if provided (optional for update)
+        if (newImages != null && !newImages.isEmpty()) {
+            fileValidationUtil.validateImages(newImages, false); // Not required for update
+        }
+
+        GlobalResponseDTO<?, ?> response = carService.updateCar(id, carRequest, newImages);
         return ResponseEntity.ok(response);
     }
 

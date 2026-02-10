@@ -13,6 +13,7 @@ import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
 import web.car_system.Car_Service.domain.dto.lead.CreateLeadRequest;
 import web.car_system.Car_Service.domain.dto.lead.LeadDto;
+import web.car_system.Car_Service.domain.dto.lead.LeadFilterRequest;
 import web.car_system.Car_Service.domain.dto.lead.UpdateLeadRequest;
 import web.car_system.Car_Service.service.LeadService;
 
@@ -42,6 +43,18 @@ public class LeadController {
     public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<LeadDto>>> getAllLeads(Pageable pageable) {
         Page<LeadDto> leadPage = leadService.getAllLeads(pageable);
         return successPageable(leadPage, "Lấy danh sách khách hàng tiềm năng thành công.");
+    }
+    
+    /**
+     * Search/filter leads với các tiêu chí phức tạp
+     * Sử dụng GET với query parameters
+     */
+    @GetMapping(SEARCH)
+    public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<LeadDto>>> searchLeads(
+            @ModelAttribute LeadFilterRequest filter,
+            Pageable pageable) {
+        Page<LeadDto> leadPage = leadService.searchLeads(filter, pageable);
+        return successPageable(leadPage, "Tìm kiếm khách hàng tiềm năng thành công.");
     }
 
     @GetMapping(GET_BY_ID)

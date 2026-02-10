@@ -2,6 +2,7 @@ package web.car_system.Car_Service.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import web.car_system.Car_Service.domain.dto.test_drive.TestDriveFilterRequest;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.CreateTestDriveAppointmentRequest;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.TestDriveAppointmentDto;
 import web.car_system.Car_Service.domain.dto.test_drive_appointment.UpdateTestDriveAppointmentRequest;
@@ -21,6 +22,14 @@ public interface TestDriveAppointmentService {
      * @return một trang chứa các lịch hẹn.
      */
     Page<TestDriveAppointmentDto> getAllAppointments(Pageable pageable);
+    
+    /**
+     * Search/filter test drive appointments với các tiêu chí phức tạp
+     * @param filter TestDriveFilterRequest chứa các tiêu chí tìm kiếm
+     * @param pageable Thông tin phân trang
+     * @return Page chứa các TestDrive matching filter
+     */
+    Page<TestDriveAppointmentDto> searchAppointments(TestDriveFilterRequest filter, Pageable pageable);
 
     /**
      * Admin lấy chi tiết của một lịch hẹn.

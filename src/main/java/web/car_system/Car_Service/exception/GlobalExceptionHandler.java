@@ -62,6 +62,23 @@ public class GlobalExceptionHandler {
                         .data(null)
                         .build());
     }
+    
+    /**
+     * Handle business logic violations
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<GlobalResponseDTO<?, ?>> handleBusinessException(BusinessException ex) {
+        log.warn("Business rule violation: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(
+                GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                        .meta(NoPaginatedMeta.builder()
+                                .status(Status.ERROR)
+                                .message(ex.getMessage())
+                                .build())
+                        .data(null)
+                        .build());
+    }
+    
     /**
      * Handler cho các lỗi không tìm thấy tài nguyên (ví dụ: xe, người dùng...).
      * Trả về mã lỗi 404 Not Found.
