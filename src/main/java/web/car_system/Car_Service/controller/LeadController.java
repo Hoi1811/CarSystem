@@ -72,8 +72,8 @@ public class LeadController {
     }
 
     @DeleteMapping(DELETE)
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteLead(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteLead(@PathVariable Long id) {
         leadService.deleteLead(id);
-        return success(null, "Xóa lead thành công.");
+        return ResponseEntity.noContent().build();
     }
 }

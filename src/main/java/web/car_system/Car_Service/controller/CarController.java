@@ -46,6 +46,7 @@ public class CarController {
     private final ComparisonService comparisonService;
     private final RegionalFeeService regionalFeeService;
     private final FileValidationUtil fileValidationUtil;
+    private final web.car_system.Car_Service.service.UserActivityLogService activityLogService;  // ✅ Track user behavior
 
     @PatchMapping(CHANGE_CAR_STATUS)
     public ResponseEntity<?> updateCarStatus(
@@ -200,8 +201,63 @@ public class CarController {
 //    }
 
     @GetMapping(Endpoint.V1.CAR.CAR_ID)
-    public ResponseEntity<GlobalResponseDTO<?, ?>> getCarById(@PathVariable @Min(0) Integer id) {
+    public ResponseEntity<GlobalResponseDTO<?, ?>> getCarById(
+            @PathVariable @Min(0) Integer id,
+            jakarta.servlet.http.HttpServletRequest request) {
+        
+        // ✅ Track user activity for recommendation system (async, non-blocking)
+        try {
+            jakarta.servlet.http.HttpSession session = request.getSession(false);
+            String sessionId = session != null ? session.getId() : java.util.UUID.randomUUID().toString();
+            String ipAddress = getClientIp(request);
+            Long userId = getCurrentUserId();  // Returns null if not logged in
+            
+            activityLogService.logViewCar(userId, sessionId, id, ipAddress);
+        } catch (Exception e) {
+            // Silently fail - tracking should not break main flow
+        }
+        
         return ResponseEntity.ok(carService.getCarById(id));
+    }
+    
+    /**
+     * Helper: Get current user ID if authenticated
+     */
+    private Long getCurrentUserId() {
+        try {
+            org.springframework.security.core.Authentication auth = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                String username = auth.getName();
+                // Simple approach: parse username as userId if it's numeric, or return null
+                try {
+                    return Long.parseLong(username);
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
+    }
+    
+    /**
+     * Helper: Extract client IP address (handles proxy/load balancer)
+     */
+    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        // Handle multiple IPs in X-Forwarded-For
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 
     @GetMapping(Endpoint.V1.CAR.CAR)

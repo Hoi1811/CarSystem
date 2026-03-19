@@ -31,10 +31,13 @@ import web.car_system.Car_Service.service.UserService;
 import web.car_system.Car_Service.utility.JwtTokenUtil;
 import web.car_system.Car_Service.utility.UserInformationUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 @Service
@@ -74,10 +77,16 @@ public class AuthServiceImpl implements AuthService {
     private String facebookUserInfoUri;
     @Value("${jwt.ttl-in-seconds}")
     private long defaultTtlInSeconds;
+    @Value("${jwt.refresh-ttl-in-seconds}")
+    private long refreshTtlInSeconds;
 
     @Override
     public String getOAuth2AuthorizationUrl(String provider) {
-        String state = Base64.getUrlEncoder().encodeToString(provider.getBytes());
+        // Tạo nonce ngẫu nhiên và lưu vào Redis để bảo vệ CSRF (OAuth2 state parameter)
+        String nonce = UUID.randomUUID().toString();
+        String statePayload = provider + ":" + nonce;
+        String state = Base64.getUrlEncoder().encodeToString(statePayload.getBytes(StandardCharsets.UTF_8));
+        redisTemplate.opsForValue().set("oauth2_state:" + nonce, provider, 5, TimeUnit.MINUTES);
         return switch (provider.toLowerCase()) {
             case "google" -> String.format(googleAuthorizationUri +
                             "?client_id=%s&redirect_uri=%s&response_type=code&scope=profile email&state=%s",
@@ -90,8 +99,22 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public GlobalResponseDTO<NoPaginatedMeta, Map<String, String>> handleOAuth2Callback(String provider, String code, boolean rememberMeByDefault) {
+    public GlobalResponseDTO<NoPaginatedMeta, Map<String, String>> handleOAuth2Callback(String code, String state, boolean rememberMeByDefault) {
         try {
+            // Decode và validate state để bảo vệ CSRF
+            String statePayload = new String(Base64.getUrlDecoder().decode(state), StandardCharsets.UTF_8);
+            String[] stateParts = statePayload.split(":", 2);
+            if (stateParts.length != 2) {
+                throw new SecurityException("Invalid OAuth2 state parameter");
+            }
+            String provider = stateParts[0];
+            String nonce = stateParts[1];
+            String storedProvider = (String) redisTemplate.opsForValue().get("oauth2_state:" + nonce);
+            if (storedProvider == null || !storedProvider.equals(provider)) {
+                throw new SecurityException("Invalid or expired OAuth2 state - possible CSRF attack");
+            }
+            redisTemplate.delete("oauth2_state:" + nonce); // one-time use
+
             OAuth2TokenResponseDTO tokenResponse = exchangeCodeForToken(provider, code).block();
             if (tokenResponse == null) throw new RuntimeException("Failed to exchange code for token");
             OAuth2UserInfo userInfo = verifyOAuth2Token(provider, tokenResponse.access_token()).block();
@@ -226,25 +249,38 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void refreshToken(String refreshToken, HttpServletResponse response) {
-        Integer userId = (Integer) redisTemplate.opsForValue().get("refresh_token:" + refreshToken);
-        if (userId == null || redisTemplate.hasKey("blacklist:refresh_token:" + refreshToken)) {
+        String redisKey = "refresh_token:" + refreshToken;
+        String userIdStr = (String) redisTemplate.opsForValue().get(redisKey);
+        if (userIdStr == null) {
             throw new RuntimeException("Invalid refresh token, please try again");
         }
 
-        User user = userRepository.findById(userId.longValue())
+        // Rotation: invalidate old refresh token before issuing a new one
+        redisTemplate.delete(redisKey);
+
+        User user = userRepository.findById(Long.parseLong(userIdStr))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String newAccessToken = jwtTokenUtil.generateAccessToken(user);
+        String newRefreshToken = jwtTokenUtil.generateAndStoreRefreshToken(user);
 
-        ResponseCookie cookie = ResponseCookie.from("accessToken", newAccessToken)
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", newAccessToken)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
                 .maxAge(15 * 60)
                 .sameSite("None")
                 .build();
+        response.addHeader("Set-Cookie", accessCookie.toString());
 
-        response.addHeader("Set-Cookie", cookie.toString());
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(refreshTtlInSeconds)
+                .sameSite("None")
+                .build();
+        response.addHeader("Set-Cookie", refreshCookie.toString());
     }
 
     @Override
@@ -253,12 +289,13 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = tokenPair.getFirst();
         String refreshToken = tokenPair.getSecond();
 
+        // Read userId BEFORE revoking refresh token — revokeRefreshToken() deletes the key
+        String userId = (String) redisTemplate.opsForValue().get("refresh_token:" + refreshToken);
+
         jwtTokenUtil.revokeToken(accessToken);
         jwtTokenUtil.revokeRefreshToken(refreshToken);
 
-        String userId = (String) redisTemplate.opsForValue().get("refresh_token:" + refreshToken);
         if (userId != null) {
-            redisTemplate.delete("refresh_token:" + userId);
             redisTemplate.delete("user_authorities:" + userId);
         }
 

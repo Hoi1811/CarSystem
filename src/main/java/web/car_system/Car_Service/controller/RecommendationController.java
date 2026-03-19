@@ -71,8 +71,8 @@ public class RecommendationController {
     }
 
     @DeleteMapping(DELETE_RULE)
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteRule(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteRule(@PathVariable Long id) {
         recommendationService.deleteRule(id);
-        return success(null, "Xóa quy tắc thành công.");
+        return ResponseEntity.noContent().build();
     }
 }

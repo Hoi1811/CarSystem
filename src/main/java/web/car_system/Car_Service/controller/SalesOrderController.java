@@ -23,20 +23,24 @@ import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
 import web.car_system.Car_Service.domain.dto.payment.AddPaymentRequest;
 import web.car_system.Car_Service.domain.dto.payment.PaymentTransactionDto;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import web.car_system.Car_Service.domain.dto.sales_order.CancelOrderRequest;
 import web.car_system.Car_Service.domain.dto.sales_order.CreateOrderRequest;
 import web.car_system.Car_Service.domain.dto.sales_order.OrderDto;
 import web.car_system.Car_Service.domain.dto.sales_order.OrderFilterRequest;
 import web.car_system.Car_Service.domain.dto.sales_order.OrderStatusHistoryDto;
 import web.car_system.Car_Service.domain.dto.sales_order.OrderSummaryDto;
 import web.car_system.Car_Service.domain.dto.sales_order.UpdateOrderRequest;
-import web.car_system.Car_Service.domain.entity.OrderStatus;
+import web.car_system.Car_Service.domain.dto.sales_order.UpdateOrderStatusRequest;
 import web.car_system.Car_Service.service.OrderAnalyticsService;
 import web.car_system.Car_Service.service.PaymentTransactionService;
 import web.car_system.Car_Service.service.SalesOrderService;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 
 import static web.car_system.Car_Service.constant.Endpoint.V1.SALES_ORDER.*;
 import static web.car_system.Car_Service.utility.ResponseFactory.success;
@@ -44,6 +48,7 @@ import static web.car_system.Car_Service.utility.ResponseFactory.successPageable
 
 @RestApiV1
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Sales Orders", description = "Sales order management APIs including order creation, payment processing, status tracking, and analytics")
 @SecurityRequirement(name = "bearerAuth")
 public class SalesOrderController {
@@ -136,12 +141,9 @@ public class SalesOrderController {
     @PatchMapping(UPDATE_STATUS)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, OrderDto>> updateOrderStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, String> request) {
-        
-        OrderStatus newStatus = OrderStatus.valueOf(request.get("status"));
-        String reason = request.get("reason");
-        
-        OrderDto order = salesOrderService.updateOrderStatus(id, newStatus, reason);
+            @Valid @RequestBody UpdateOrderStatusRequest request) {
+
+        OrderDto order = salesOrderService.updateOrderStatus(id, request.getStatus(), request.getReason());
         return success(order, "Cập nhật trạng thái đơn hàng thành công");
     }
     
@@ -153,10 +155,9 @@ public class SalesOrderController {
     @PostMapping(CANCEL_ORDER)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, OrderDto>> cancelOrder(
             @PathVariable Long id,
-            @RequestBody Map<String, String> request) {
-        
-        String reason = request.get("reason");
-        OrderDto order = salesOrderService.cancelOrder(id, reason);
+            @Valid @RequestBody CancelOrderRequest request) {
+
+        OrderDto order = salesOrderService.cancelOrder(id, request.getReason());
         return success(order, "Hủy đơn hàng thành công");
     }
     
@@ -165,11 +166,11 @@ public class SalesOrderController {
      * DELETE /api/v1/admin/sales-orders/{id}
      */
     @DeleteMapping(DELETE_ORDER)
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteOrder(
+    public ResponseEntity<Void> deleteOrder(
             @PathVariable Long id) {
-        
+
         salesOrderService.deleteOrder(id);
-        return success(null, "Xóa đơn hàng thành công");
+        return ResponseEntity.noContent().build();
     }
     
     // ===== PAYMENT ENDPOINTS =====
@@ -235,10 +236,10 @@ public class SalesOrderController {
      */
     @GetMapping(ADMIN_PREFIX + "/analytics/top-staff")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<SalesStaffPerformanceDto>>> getTopSalesStaff(
-            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        
+
         List<SalesStaffPerformanceDto> topStaff = analyticsService.getTopSalesStaff(limit, fromDate, toDate);
         return success(topStaff, "Lấy bảng xếp hạng nhân viên thành công");
     }
@@ -253,20 +254,19 @@ public class SalesOrderController {
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, OrderDto>> trackOrder(
             @RequestParam String orderNumber,
             @RequestParam String phone) {
-        
-        // Get order by number
+
         OrderDto order = salesOrderService.getOrderByNumber(orderNumber);
-        
-        // Verify phone matches
-        if (!order.getCustomerPhone().equals(phone)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+
+        // Verify phone matches — use Objects.equals to avoid NPE, return 404 to prevent enumeration
+        if (!Objects.equals(phone, order.getCustomerPhone())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(GlobalResponseDTO.<NoPaginatedMeta, OrderDto>builder()
                     .meta(NoPaginatedMeta.builder()
-                        .message("Số điện thoại không khớp")
+                        .message("Không tìm thấy đơn hàng")
                         .build())
                     .build());
         }
-        
+
         return success(order, "Tìm thấy đơn hàng");
     }
 }

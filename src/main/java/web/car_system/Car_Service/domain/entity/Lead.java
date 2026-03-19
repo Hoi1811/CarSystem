@@ -3,6 +3,9 @@ package web.car_system.Car_Service.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -15,6 +18,8 @@ import org.hibernate.annotations.SQLRestriction;
 @SuperBuilder
 @SQLDelete(sql = "UPDATE leads SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
+@FilterDef(name = "tenantFilter", parameters = {@ParamDef(name = "tenantId", type = Long.class)})
+@Filter(name = "tenantFilter", condition = "showroom_id = :tenantId")
 public class Lead extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,5 +52,9 @@ public class Lead extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_user_id")
     private User assignee;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "showroom_id")
+    private Showroom showroom;
 
 }

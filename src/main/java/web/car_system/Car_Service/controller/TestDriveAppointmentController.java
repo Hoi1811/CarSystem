@@ -64,9 +64,9 @@ public class TestDriveAppointmentController {
     }
 
     @DeleteMapping(DELETE)
-    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteAppointment(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
         appointmentService.deleteAppointment(id);
-        return success(null, "Xóa lịch hẹn thành công.");
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping(UPDATE)

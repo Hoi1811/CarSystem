@@ -144,9 +144,9 @@ public class JwtTokenUtil {
             log.warn("No authorities found for userId: {}", user.getUserId());
         }
 
-        // Lưu refresh token vào Redis
+        // Lưu refresh token vào Redis — lưu dạng String để tránh ClassCastException khi đọc lại
         String refreshRedisKey = "refresh_token:" + refreshToken;
-        redisTemplate.opsForValue().set(refreshRedisKey, user.getUserId(), defaultRefreshTtlInSeconds, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(refreshRedisKey, user.getUserId().toString(), defaultRefreshTtlInSeconds, TimeUnit.SECONDS);
 
         return Map.of("accessToken", accessToken, "refreshToken", refreshToken);
     }
@@ -169,6 +169,20 @@ public class JwtTokenUtil {
 
     private String generateRefreshToken(User user) {
         return UUID.randomUUID().toString() + user.getUserId();
+    }
+
+    /**
+     * Generates a new refresh token, stores it in Redis, and returns the token string.
+     * Used for refresh token rotation — call this when issuing a replacement refresh token.
+     */
+    public String generateAndStoreRefreshToken(User user) {
+        String refreshToken = generateRefreshToken(user);
+        redisTemplate.opsForValue().set(
+                "refresh_token:" + refreshToken,
+                user.getUserId().toString(),
+                defaultRefreshTtlInSeconds,
+                TimeUnit.SECONDS);
+        return refreshToken;
     }
 
     public String refreshAccessToken(String refreshToken) {

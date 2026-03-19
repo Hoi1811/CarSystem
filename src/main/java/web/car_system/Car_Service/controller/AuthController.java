@@ -49,29 +49,26 @@ public class AuthController {
                                 @RequestParam String code,
                                 @RequestParam String state,
                                 HttpServletResponse httpServletResponse) throws IOException { // Đổi tên biến cho rõ ràng
-        String provider = "";
+        String providerHint = extractProviderHint(state);
         try {
-            provider = new String(Base64.getUrlDecoder().decode(state));
-            logger.info("Decoded provider from state: {}", provider);
-
-            // Gọi service để xử lý code, lấy token, lấy user info, tạo/cập nhật user, tạo JWT
+            // Gọi service để validate state (CSRF), xử lý code, lấy token, tạo/cập nhật user, tạo JWT
             GlobalResponseDTO<NoPaginatedMeta, Map<String, String>> authServiceResponse =
-                    authService.handleOAuth2Callback(provider, code, true);
+                    authService.handleOAuth2Callback(code, state, true);
 
             // Nếu service xử lý thành công và trả về token của bạn
             if (authServiceResponse.meta().status() == Status.SUCCESS && authServiceResponse.data() != null) {
                 Map<String, String> tokens = authServiceResponse.data();
 
                 // Thêm accessToken và refreshToken của bạn vào HttpOnly cookies
-                authService.addTokensToCookies(tokens,true, httpServletResponse);
-                logger.info("OAuth2 login successful for provider {}, redirecting to frontend: {}", provider, frontendOAuthRedirectUri);
+                authService.addTokensToCookies(tokens, true, httpServletResponse);
+                logger.info("OAuth2 login successful for provider {}, redirecting to frontend: {}", providerHint, frontendOAuthRedirectUri);
 
                 // CHUYỂN HƯỚNG VỀ FRONTEND SAU KHI ĐẶT COOKIES THÀNH CÔNG
-                httpServletResponse.sendRedirect(frontendOAuthRedirectUri); // Không có query params lỗi
+                httpServletResponse.sendRedirect(frontendOAuthRedirectUri);
             } else {
-                // Nếu service xử lý có lỗi (ví dụ: không đổi được code lấy token, user không hợp lệ, ...)
+                // Nếu service xử lý có lỗi (ví dụ: state CSRF không hợp lệ, lỗi đổi code, ...)
                 String errorMessage = authServiceResponse.meta().message() != null ? authServiceResponse.meta().message() : "Lỗi xử lý OAuth2 không xác định.";
-                logger.error("OAuth2 callback processing error for provider {}: {}", provider, errorMessage);
+                logger.error("OAuth2 callback processing error for provider {}: {}", providerHint, errorMessage);
 
                 // CHUYỂN HƯỚNG VỀ FRONTEND VỚI THÔNG BÁO LỖI
                 String errorRedirectUrl = frontendOAuthRedirectUri + "?error=true&message=" +
@@ -79,9 +76,7 @@ public class AuthController {
                 httpServletResponse.sendRedirect(errorRedirectUrl);
             }
         } catch (Exception e) {
-            // Bắt các lỗi không mong muốn khác trong quá trình xử lý
-            String safeProviderName = provider.isEmpty() ? "unknown provider" : provider;
-            logger.error("Critical OAuth2 callback failed for provider '{}': {}", safeProviderName, e.getMessage(), e);
+            logger.error("Critical OAuth2 callback failed for provider '{}': {}", providerHint, e.getMessage(), e);
             String errorMessage = "Lỗi hệ thống trong quá trình đăng nhập OAuth2.";
             String errorRedirectUrl = frontendOAuthRedirectUri + "?error=true&message=" +
                     URLEncoder.encode(errorMessage, StandardCharsets.UTF_8.toString());
@@ -226,27 +221,37 @@ public class AuthController {
                             .build())
                     .build());
         } catch (Exception e) {
+            logger.error("Logout failed", e);
             return ResponseEntity.badRequest().body(
                     GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                             .meta(NoPaginatedMeta.builder()
                                     .status(Status.ERROR)
-                                    .message("Logout Error: " + e.getMessage())
+                                    .message("Đăng xuất thất bại. Vui lòng thử lại.")
                                     .build())
                             .build());
-
         }
     }
 
     /**
-     * Lấy IP address của client
-     * Handle cả trường hợp có proxy (X-Forwarded-For header)
+     * Best-effort decode provider name from OAuth2 state for logging purposes only.
+     * Security validation of the full state is performed inside AuthService.
+     */
+    private String extractProviderHint(String state) {
+        try {
+            String decoded = new String(Base64.getUrlDecoder().decode(state), StandardCharsets.UTF_8);
+            String[] parts = decoded.split(":", 2);
+            return parts.length >= 1 ? parts[0] : "unknown";
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
+    /**
+     * Lấy IP address của client dùng cho brute-force tracking.
+     * Dùng getRemoteAddr() để tránh bị giả mạo qua header X-Forwarded-For.
+     * Nếu chạy sau một trusted reverse proxy, cấu hình proxy để ghi đè RemoteAddr ở server level.
      */
     private String getClientIP(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader != null && !xfHeader.isEmpty()) {
-            // Lấy IP đầu tiên trong chain (real client IP)
-            return xfHeader.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
     }
 }

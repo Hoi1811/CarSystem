@@ -3,6 +3,9 @@ package web.car_system.Car_Service.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -18,6 +21,8 @@ import org.hibernate.annotations.SQLRestriction;
 @Builder
 @SQLDelete(sql = "UPDATE inventory_cars SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
+@FilterDef(name = "tenantFilter", parameters = {@ParamDef(name = "tenantId", type = Long.class)})
+@Filter(name = "tenantFilter", condition = "showroom_id = :tenantId")
 public class InventoryCar extends BaseEntity{ // Có thể kế thừa BaseEntity để có deleted_at
 
     @Id
@@ -28,6 +33,10 @@ public class InventoryCar extends BaseEntity{ // Có thể kế thừa BaseEntit
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "car_id", nullable = false)
     private Car car;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "showroom_id")
+    private Showroom showroom;
 
     // ----- Các thuộc tính riêng của xe trong kho -----
     @Column(nullable = false)

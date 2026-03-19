@@ -11,7 +11,7 @@ import java.util.Map;
 
 public interface AuthService {
     String getOAuth2AuthorizationUrl(String provider);
-    GlobalResponseDTO<NoPaginatedMeta, Map<String, String>> handleOAuth2Callback(String provider, String code, boolean rememberMeByDefault);
+    GlobalResponseDTO<NoPaginatedMeta, Map<String, String>> handleOAuth2Callback(String code, String state, boolean rememberMeByDefault);
     GlobalResponseDTO<NoPaginatedMeta, User> registerLocalUser(String username, String password, String email);
     void loginLocalUser(String username, String password, boolean rememberMe,  HttpServletResponse response);
     void refreshToken(String refreshToken,  HttpServletResponse response);

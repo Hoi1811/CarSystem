@@ -3,6 +3,9 @@ package web.car_system.Car_Service.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -25,6 +28,8 @@ import java.time.LocalDate;
 @SuperBuilder
 @SQLDelete(sql = "UPDATE sales_orders SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
+@FilterDef(name = "tenantFilter", parameters = {@ParamDef(name = "tenantId", type = Long.class)})
+@Filter(name = "tenantFilter", condition = "showroom_id = :tenantId")
 public class SalesOrder extends BaseEntity {
     
     @Id
@@ -63,6 +68,10 @@ public class SalesOrder extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lead_id")
     private Lead lead; // Source lead if converted
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "showroom_id")
+    private Showroom showroom;
     
     // === Pricing ===
     @Column(name = "base_price", nullable = false, precision = 15, scale = 2)

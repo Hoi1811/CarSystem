@@ -59,6 +59,8 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_ALL_AVAILABLE).permitAll()
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_DETAILS_BY_ID).permitAll()
                         .requestMatchers(Endpoint.V1.RECOMMENDATION.GET_SUGGESTIONS).permitAll()
+                        // Apriori Recommendations: Public access for all users (including guests)
+                        .requestMatchers("/api/v1/apriori-recommendations/**").permitAll()
                         .requestMatchers(Endpoint.V1.LEAD.SUBMIT_LEAD).permitAll()
                         .requestMatchers(
                                 Endpoint.V1.CAR.MANUFACTURER,
@@ -74,8 +76,8 @@ public class SecurityConfig {
                         //==> Các endpoint yêu cầu vai trò USER hoặc ADMIN
                         .requestMatchers(Endpoint.V1.USER.ME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(POST, Endpoint.V1.CAR.CAR_ID_IMAGES).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_MODELS_BY_NAME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_CAR_NAMES_BY_NAME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_MODELS_BY_NAME).permitAll()
+                        .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_CAR_NAMES_BY_NAME).permitAll()
                         .requestMatchers(POST, Endpoint.V1.CAR.CAR_V2).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
                         //==> Các endpoint yêu cầu vai trò ADMIN

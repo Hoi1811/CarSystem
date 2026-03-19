@@ -56,6 +56,10 @@ public class User extends BaseEntity implements UserDetails { // <-- Bước 1: 
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "showroom_id")
+    private Showroom showroom;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // Nên lấy quyền từ Set<Role> thì sẽ đúng hơn
