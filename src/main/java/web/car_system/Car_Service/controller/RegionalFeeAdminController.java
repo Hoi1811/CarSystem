@@ -4,10 +4,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import web.car_system.Car_Service.annotation.RestApiV1;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
+import web.car_system.Car_Service.domain.dto.regional_fee.CreateRegionalFeeRequest;
 import web.car_system.Car_Service.domain.dto.regional_fee.RegionalFeeDto;
+import web.car_system.Car_Service.domain.dto.regional_fee.UpdateRegionalFeeRequest;
 import web.car_system.Car_Service.service.RegionalFeeService;
 import java.util.List;
 
@@ -15,7 +19,8 @@ import static web.car_system.Car_Service.constant.Endpoint.V1.REGIONAL_FEE.*;
 import static web.car_system.Car_Service.utility.ResponseFactory.success;
 
 
-@RestController
+@RestApiV1
+@PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
 @RequiredArgsConstructor
 public class RegionalFeeAdminController {
 
@@ -29,7 +34,7 @@ public class RegionalFeeAdminController {
 
     @PostMapping(CREATE)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RegionalFeeDto>> create(
-            @Valid @RequestBody RegionalFeeDto request) {
+            @Valid @RequestBody CreateRegionalFeeRequest request) {
         RegionalFeeDto createdFee = regionalFeeService.createRegionalFee(request);
         return success(createdFee, "Tạo cấu hình phí mới thành công.", HttpStatus.CREATED);
     }
@@ -37,7 +42,7 @@ public class RegionalFeeAdminController {
     @PutMapping(UPDATE)
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, RegionalFeeDto>> update(
             @PathVariable Long id,
-            @Valid @RequestBody RegionalFeeDto request) {
+            @Valid @RequestBody UpdateRegionalFeeRequest request) {
         RegionalFeeDto updatedFee = regionalFeeService.updateRegionalFee(id, request);
         return success(updatedFee, "Cập nhật cấu hình phí thành công.");
     }

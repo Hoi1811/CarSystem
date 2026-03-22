@@ -12,6 +12,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "showrooms")
+@AttributeOverride(name = "status", column = @Column(name = "entity_status"))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -51,8 +52,8 @@ public class Showroom extends BaseEntity {
     private Integer totalReviews = 0;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ShowroomStatus status = ShowroomStatus.ACTIVE;
+    @Column(name = "status", nullable = false)
+    private ShowroomStatus showroomStatus = ShowroomStatus.ACTIVE;
 
     @OneToMany(mappedBy = "showroom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ShowroomReview> reviews = new ArrayList<>();

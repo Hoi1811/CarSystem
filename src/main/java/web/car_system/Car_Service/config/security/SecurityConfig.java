@@ -59,16 +59,29 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_ALL_AVAILABLE).permitAll()
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_DETAILS_BY_ID).permitAll()
                         .requestMatchers(Endpoint.V1.RECOMMENDATION.GET_SUGGESTIONS).permitAll()
-                        // Apriori Recommendations: Public access for all users (including guests)
-                        .requestMatchers("/api/v1/apriori-recommendations/**").permitAll()
+                        // Apriori Recommendations: GET public, POST generate-rules admin only
+                        .requestMatchers(GET, "/api/v1/apriori-recommendations/**").permitAll()
+                        .requestMatchers(POST, "/api/v1/apriori-recommendations/generate-rules").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(Endpoint.V1.LEAD.SUBMIT_LEAD).permitAll()
-                        .requestMatchers(
+                        .requestMatchers(Endpoint.V1.TEST_DRIVE.SUBMIT_APPOINTMENT).permitAll()
+                        // PUBLIC: Showroom & Review endpoints
+                        .requestMatchers(GET, "/api/v1/public/showrooms/**").permitAll()
+                        // GET công khai cho danh mục tra cứu (manufacturer, car-type, segment, segment-group)
+                        .requestMatchers(GET,
                                 Endpoint.V1.CAR.MANUFACTURER,
-                                Endpoint.V1.CAR.MANUFACTURER + "/**",
+                                Endpoint.V1.CAR.MANUFACTURER_ID,
                                 Endpoint.V1.CAR.CAR_TYPE,
+                                Endpoint.V1.CAR.CAR_TYPE_ID,
                                 Endpoint.V1.CAR.CAR_SEGMENT_GROUP,
-                                Endpoint.V1.CAR.CAR_SEGMENT
+                                Endpoint.V1.CAR.CAR_SEGMENT_GROUP_ID,
+                                Endpoint.V1.CAR.CAR_SEGMENT,
+                                Endpoint.V1.CAR.CAR_SEGMENT_ID,
+                                Endpoint.V1.CAR.CAR_SEGMENT_BY_GROUP
                         ).permitAll()
+                        // POST/PUT/DELETE cho danh mục → chỉ ADMIN
+                        .requestMatchers(POST, Endpoint.V1.CAR.MANUFACTURER, Endpoint.V1.CAR.CAR_TYPE, Endpoint.V1.CAR.CAR_SEGMENT_GROUP, Endpoint.V1.CAR.CAR_SEGMENT, Endpoint.V1.CAR.CAR_SEGMENT_BATCH).hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(PUT, Endpoint.V1.CAR.MANUFACTURER_ID, Endpoint.V1.CAR.CAR_TYPE_ID, Endpoint.V1.CAR.CAR_SEGMENT_GROUP_ID, Endpoint.V1.CAR.CAR_SEGMENT_ID).hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(DELETE, Endpoint.V1.CAR.MANUFACTURER_ID, Endpoint.V1.CAR.CAR_TYPE_ID, Endpoint.V1.CAR.CAR_SEGMENT_GROUP_ID, Endpoint.V1.CAR.CAR_SEGMENT_ID).hasAuthority("ROLE_ADMIN")
                         .requestMatchers(GET, Endpoint.V1.CAR.CAR + "/**").permitAll() // Cho phép GET toàn bộ thông tin xe
                         .requestMatchers(GET, Endpoint.V1.CAR.CAR_ID_IMAGES).permitAll()
                         .requestMatchers(GET, Endpoint.V1.USER.USER_AUTHORITIES).permitAll()
@@ -88,6 +101,11 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.USER.USER + "/**").hasAuthority("ROLE_ADMIN")
                         // THÊM MỚI: Yêu cầu quyền ADMIN cho tất cả API về ATTRIBUTE
                         .requestMatchers(Endpoint.V1.ATTRIBUTE.ATTRIBUTE_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
+                        // RECOMMENDATION RULES: Admin management
+                        .requestMatchers(Endpoint.V1.RECOMMENDATION.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
+                        // LEAD + TEST DRIVE: Admin management
+                        .requestMatchers(Endpoint.V1.LEAD.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.TEST_DRIVE.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
                         // SALES ORDER: Admin management
                         .requestMatchers(Endpoint.V1.SALES_ORDER.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
                         // ANALYTICS: Admin only
@@ -95,7 +113,7 @@ public class SecurityConfig {
 
                         .requestMatchers(GET, Endpoint.V1.UTIL.GET_CONTROL_TYPES).hasAnyAuthority("ROLE_ADMIN")
                         //
-                        .requestMatchers(Endpoint.V1.COMPARISON_RULE.GET_ALL + "/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.COMPARISON_RULE.GET_ALL).hasAuthority("ROLE_ADMIN")
                         
                         // PUBLIC: Order tracking (no auth required)
                         .requestMatchers(Endpoint.V1.SALES_ORDER.TRACK_ORDER).permitAll()

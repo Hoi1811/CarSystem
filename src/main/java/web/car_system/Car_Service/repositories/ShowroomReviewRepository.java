@@ -14,15 +14,15 @@ import java.util.Optional;
 @Repository
 public interface ShowroomReviewRepository extends JpaRepository<ShowroomReview, Long> {
     
-    Page<ShowroomReview> findByShowroomIdAndStatus(Long showroomId, ShowroomReview.ReviewStatus status, Pageable pageable);
+    Page<ShowroomReview> findByShowroomIdAndReviewStatus(Long showroomId, ShowroomReview.ReviewStatus status, Pageable pageable);
     
-    Page<ShowroomReview> findByCustomerId(Long customerId, Pageable pageable);
+    Page<ShowroomReview> findByCustomerUserId(Long userId, Pageable pageable);
     
     Optional<ShowroomReview> findByOrderId(Long orderId);
     
-    @Query("SELECT COUNT(r) FROM ShowroomReview r WHERE r.showroom.id = :showroomId AND r.status = 'APPROVED'")
+    @Query("SELECT COUNT(r) FROM ShowroomReview r WHERE r.showroom.id = :showroomId AND r.reviewStatus = 'APPROVED'")
     long countApprovedReviewsByShowroomId(@Param("showroomId") Long showroomId);
 
-    @Query("SELECT AVG(r.rating) FROM ShowroomReview r WHERE r.showroom.id = :showroomId AND r.status = 'APPROVED'")
+    @Query("SELECT AVG(r.rating) FROM ShowroomReview r WHERE r.showroom.id = :showroomId AND r.reviewStatus = 'APPROVED'")
     Double calculateAverageRatingByShowroomId(@Param("showroomId") Long showroomId);
 }

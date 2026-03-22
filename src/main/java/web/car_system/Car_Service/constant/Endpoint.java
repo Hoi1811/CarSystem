@@ -78,8 +78,8 @@ public class Endpoint {
 
             public static final String ADD_OPTION_TO_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX;              // POST .../{id}/options
             public static final String GET_OPTIONS_FOR_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX;              // GET .../{id}/options
-            public static final String UPDATE_OPTION_FOR_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{key}"; // PUT .../{id}/options/{key}
-            public static final String DELETE_OPTION_FROM_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{key}";// DELETE .../{id}/options/{key}
+            public static final String UPDATE_OPTION_FOR_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{valueKey}"; // PUT .../{id}/options/{valueKey}
+            public static final String DELETE_OPTION_FROM_ATTRIBUTE = ATTRIBUTE_OPTIONS_PREFIX + "/{valueKey}";// DELETE .../{id}/options/{valueKey}
             public static final String SAVE_ALL_OPTIONS = ATTRIBUTE_OPTIONS_PREFIX; // PUT .../{id}/options/batch
         }
         public static final class USER{

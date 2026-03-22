@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.domain.dto.car_segment;
 
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,6 +14,7 @@ public record CarSegmentBatchCreateDTO(
         @NotNull(message = "Group ID không được để trống")
         Integer groupId,
 
+        @Valid
         @NotNull(message = "Danh sách segment không được để trống")
         List<CarSegmentItemDTO> segments
 ) {

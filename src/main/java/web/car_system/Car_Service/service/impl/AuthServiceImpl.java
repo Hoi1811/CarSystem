@@ -130,9 +130,10 @@ public class AuthServiceImpl implements AuthService {
                     .data(tokens)
                     .build();
         } catch (Exception e) {
+            log.severe("OAuth2 callback processing error: " + e.getMessage());
             NoPaginatedMeta meta = NoPaginatedMeta.builder()
                     .status(Status.ERROR)
-                    .message(e.getMessage())
+                    .message("Lỗi xử lý đăng nhập OAuth2. Vui lòng thử lại.")
                     .build();
             return GlobalResponseDTO.<NoPaginatedMeta, Map<String, String>>builder()
                     .meta(meta)
@@ -268,7 +269,7 @@ public class AuthServiceImpl implements AuthService {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
-                .maxAge(15 * 60)
+                .maxAge(defaultTtlInSeconds)
                 .sameSite("None")
                 .build();
         response.addHeader("Set-Cookie", accessCookie.toString());

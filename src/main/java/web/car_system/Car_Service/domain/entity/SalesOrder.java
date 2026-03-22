@@ -28,7 +28,6 @@ import java.time.LocalDate;
 @SuperBuilder
 @SQLDelete(sql = "UPDATE sales_orders SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
-@FilterDef(name = "tenantFilter", parameters = {@ParamDef(name = "tenantId", type = Long.class)})
 @Filter(name = "tenantFilter", condition = "showroom_id = :tenantId")
 public class SalesOrder extends BaseEntity {
     

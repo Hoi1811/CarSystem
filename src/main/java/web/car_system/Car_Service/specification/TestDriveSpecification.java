@@ -33,11 +33,11 @@ public class TestDriveSpecification {
                     pattern
                 );
                 Predicate phonePredicate = criteriaBuilder.like(
-                    root.get("customerPhone"), 
+                    root.get("phoneNumber"), 
                     pattern
                 );
                 Predicate emailPredicate = criteriaBuilder.like(
-                    criteriaBuilder.lower(root.get("customerEmail")), 
+                    criteriaBuilder.lower(root.get("email")), 
                     pattern
                 );
                 
@@ -47,14 +47,14 @@ public class TestDriveSpecification {
 
             // 2. Filter by status
             if (filter.getStatus() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
+                predicates.add(criteriaBuilder.equal(root.get("appointmentStatus"), filter.getStatus()));
             }
 
             // 3. Filter by appointment date range
             if (filter.getFromDate() != null) {
                 LocalDateTime startOfDay = filter.getFromDate().atStartOfDay();
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(
-                    root.get("appointmentDate"), 
+                    root.get("preferredDateTime"), 
                     startOfDay
                 ));
             }
@@ -62,7 +62,7 @@ public class TestDriveSpecification {
             if (filter.getToDate() != null) {
                 LocalDateTime endOfDay = filter.getToDate().atTime(23, 59, 59);
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(
-                    root.get("appointmentDate"), 
+                    root.get("preferredDateTime"), 
                     endOfDay
                 ));
             }
@@ -70,7 +70,7 @@ public class TestDriveSpecification {
             // 4. Filter by inventory car
             if (filter.getInventoryCarId() != null) {
                 predicates.add(criteriaBuilder.equal(
-                    root.get("inventoryCar").get("id"), 
+                    root.get("car").get("id"), 
                     filter.getInventoryCarId()
                 ));
             }
@@ -78,7 +78,7 @@ public class TestDriveSpecification {
             // 5. Filter by assigned user (staff member)
             if (filter.getAssignedUserId() != null) {
                 predicates.add(criteriaBuilder.equal(
-                    root.get("assignedUser").get("id"), 
+                    root.get("assignee").get("userId"), 
                     filter.getAssignedUserId()
                 ));
             }

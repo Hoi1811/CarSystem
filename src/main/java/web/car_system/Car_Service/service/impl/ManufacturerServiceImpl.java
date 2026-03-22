@@ -77,6 +77,20 @@ public class ManufacturerServiceImpl implements ManufacturerService {
     }
 
     @Override
+    public GlobalResponseDTO<?, ManufacturerResponseDTO> getManufacturerById(Integer manufacturerId) {
+        Manufacturer manufacturer = repository.findById(manufacturerId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hãng sản xuất với ID: " + manufacturerId));
+
+        return GlobalResponseDTO.<NoPaginatedMeta, ManufacturerResponseDTO>builder()
+                .meta(NoPaginatedMeta.builder()
+                        .status(Status.SUCCESS)
+                        .message("Lấy thông tin hãng sản xuất thành công")
+                        .build())
+                .data(mapper.toResponseDTO(manufacturer))
+                .build();
+    }
+
+    @Override
     public GlobalResponseDTO<?, ManufacturerResponseDTO> updateManufacturer(Integer manufacturerId, ManufacturerUpdateDTO updateDTO) throws IOException {
         Manufacturer manufacturer = repository.findById(manufacturerId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hãng sản xuất"));

@@ -10,7 +10,7 @@ import web.car_system.Car_Service.domain.entity.InventoryCarStaging.StagingStatu
 @Repository
 public interface InventoryCarStagingRepository extends JpaRepository<InventoryCarStaging, Long> {
 
-    Page<InventoryCarStaging> findByStatus(StagingStatus status, Pageable pageable);
+    Page<InventoryCarStaging> findByStagingStatus(StagingStatus status, Pageable pageable);
     
     // Additional methods for duplicate detection might be needed later
 }

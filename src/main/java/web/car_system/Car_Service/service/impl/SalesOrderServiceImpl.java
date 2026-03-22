@@ -204,10 +204,16 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             throw new BusinessException("Đơn hàng đã bị hủy trước đó");
         }
         
+        // Log status change before updating
+        OrderStatus oldStatus = order.getOrderStatus();
+        
         // Update order
         order.setOrderStatus(OrderStatus.CANCELLED);
         order.setCancellationReason(reason);
         order.setCancelledDate(LocalDate.now());
+        
+        // Record in status history
+        logStatusChange(order, oldStatus, OrderStatus.CANCELLED, reason);
         
         // Release inventory car
         InventoryCar car = order.getInventoryCar();

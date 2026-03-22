@@ -18,7 +18,6 @@ import org.hibernate.annotations.SQLRestriction;
 @SuperBuilder
 @SQLDelete(sql = "UPDATE leads SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
-@FilterDef(name = "tenantFilter", parameters = {@ParamDef(name = "tenantId", type = Long.class)})
 @Filter(name = "tenantFilter", condition = "showroom_id = :tenantId")
 public class Lead extends BaseEntity {
     @Id

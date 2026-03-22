@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "inventory_cars_staging")
+@AttributeOverride(name = "status", column = @Column(name = "entity_status"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -66,8 +67,9 @@ public class InventoryCarStaging extends BaseEntity {
 
     // --- Status & Audit ---
     @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     @Builder.Default
-    private StagingStatus status = StagingStatus.PENDING_REVIEW;
+    private StagingStatus stagingStatus = StagingStatus.PENDING_REVIEW;
 
     @Column(columnDefinition = "TEXT")
     private String note;

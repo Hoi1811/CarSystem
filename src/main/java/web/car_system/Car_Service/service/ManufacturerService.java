@@ -12,6 +12,7 @@ import web.car_system.Car_Service.domain.dto.manufacturer.ManufacturerResponseDT
 public interface ManufacturerService {
     GlobalResponseDTO<?, ManufacturerResponseDTO> createManufacturer(ManufacturerCreateDTO createDTO) throws IOException;
     GlobalResponseDTO<PaginatedMeta, List<ManufacturerResponseDTO>> getAllManufacturers(Pageable pageable);
+    GlobalResponseDTO<?, ManufacturerResponseDTO> getManufacturerById(Integer manufacturerId);
     GlobalResponseDTO<?, ManufacturerResponseDTO> updateManufacturer(Integer manufacturerId, ManufacturerUpdateDTO updateDTO) throws IOException;
     GlobalResponseDTO<?, Void> deleteManufacturer(Integer manufacturerId);
 

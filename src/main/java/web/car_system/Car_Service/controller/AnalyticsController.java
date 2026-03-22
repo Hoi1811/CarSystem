@@ -16,6 +16,7 @@ import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.service.DashboardAnalyticsService;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static web.car_system.Car_Service.constant.Endpoint.V1.ANALYTICS.*;
@@ -40,10 +41,11 @@ public class AnalyticsController {
     )
     @ApiResponse(responseCode = "200", description = "Dashboard data retrieved successfully")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, DashboardSummaryDto>> getDashboardSummary(
-        @Parameter(description = "Year for revenue trend data", example = "2024")
-        @RequestParam(defaultValue = "2024") int year
+        @Parameter(description = "Year for revenue trend data", example = "2025")
+        @RequestParam(required = false) Integer year
     ) {
-        DashboardSummaryDto summary = dashboardAnalyticsService.getDashboardSummary(year);
+        int effectiveYear = (year != null) ? year : LocalDate.now().getYear();
+        DashboardSummaryDto summary = dashboardAnalyticsService.getDashboardSummary(effectiveYear);
         return success(summary, "Lấy dữ liệu dashboard thành công");
     }
     
@@ -54,10 +56,11 @@ public class AnalyticsController {
     )
     @ApiResponse(responseCode = "200", description = "Revenue data retrieved successfully")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<RevenueTrendDto>>> getMonthlyRevenue(
-        @Parameter(description = "Year to fetch revenue for", example = "2024")
-        @RequestParam(defaultValue = "2024") int year
+        @Parameter(description = "Year to fetch revenue for", example = "2025")
+        @RequestParam(required = false) Integer year
     ) {
-        List<RevenueTrendDto> trends = dashboardAnalyticsService.getMonthlyRevenue(year);
+        int effectiveYear = (year != null) ? year : LocalDate.now().getYear();
+        List<RevenueTrendDto> trends = dashboardAnalyticsService.getMonthlyRevenue(effectiveYear);
         return success(trends, "Lấy dữ liệu doanh thu theo tháng thành công");
     }
     

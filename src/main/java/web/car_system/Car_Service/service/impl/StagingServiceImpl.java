@@ -17,7 +17,7 @@ import web.car_system.Car_Service.domain.entity.Car;
 import web.car_system.Car_Service.domain.entity.CarAttribute;
 import web.car_system.Car_Service.domain.entity.InventoryCarStaging;
 import web.car_system.Car_Service.domain.entity.InventoryCarStaging.StagingStatus;
-import web.car_system.Car_Service.repositories.CarRepository;
+import web.car_system.Car_Service.repository.CarRepository;
 import web.car_system.Car_Service.repositories.InventoryCarStagingRepository;
 import web.car_system.Car_Service.repository.AttributeRepository;
 import web.car_system.Car_Service.repository.CarAttributeRepository;
@@ -57,7 +57,7 @@ public class StagingServiceImpl implements StagingService {
                         .year(req.getYear())
                         .price(req.getPrice())
                         .rawSpecifications(rawJson)
-                        .status(StagingStatus.PENDING_REVIEW)
+                        .stagingStatus(StagingStatus.PENDING_REVIEW)
                         .build();
                         
                 stagingRepository.save(staging);
@@ -72,7 +72,7 @@ public class StagingServiceImpl implements StagingService {
     @Override
     @Transactional(readOnly = true)
     public Page<StagingResponseDto> getStagingDataWithValidation(StagingStatus status, Pageable pageable) {
-        Page<InventoryCarStaging> rawPage = stagingRepository.findByStatus(status, pageable);
+        Page<InventoryCarStaging> rawPage = stagingRepository.findByStagingStatus(status, pageable);
         
         return rawPage.map(staging -> {
             try {
@@ -92,7 +92,7 @@ public class StagingServiceImpl implements StagingService {
                 boolean hasWarnings = mappingResult.validationFlags.values().stream()
                         .anyMatch(f -> "WARNING".equals(f.status));
 
-                if (!hasWarnings && !isDuplicate && staging.getStatus() == StagingStatus.PENDING_REVIEW) {
+                if (!hasWarnings && !isDuplicate && staging.getStagingStatus() == StagingStatus.PENDING_REVIEW) {
                     // It CAN be auto-approved logically, but we don't save to DB unless requested
                     // Just a visual cue
                 }
@@ -108,9 +108,9 @@ public class StagingServiceImpl implements StagingService {
                         .normalizedSpecifications(mappingResult.normalizedData)
                         .validationFlags(mappingResult.validationFlags)
                         .isDuplicateDb(isDuplicate)
-                        .status(staging.getStatus())
+                        .status(staging.getStagingStatus())
                         .note(staging.getNote())
-                        .createdAt(staging.getCreatedAt())
+                        .createdAt(staging.getCreatedAt() != null ? staging.getCreatedAt().toLocalDateTime() : null)
                         .build();
 
             } catch (JsonProcessingException e) {
@@ -128,7 +128,7 @@ public class StagingServiceImpl implements StagingService {
 
         try {
             staging.setNormalizedSpecifications(objectMapper.writeValueAsString(updatedNormalizedSpecs));
-            staging.setStatus(StagingStatus.READY_TO_APPROVE);
+            staging.setStagingStatus(StagingStatus.READY_TO_APPROVE);
             stagingRepository.save(staging);
             
             // Re-fetch to return exact DTO
@@ -150,15 +150,16 @@ public class StagingServiceImpl implements StagingService {
         int count = 0;
         
         for (InventoryCarStaging staging : stagingList) {
-            if (staging.getStatus() == StagingStatus.COMPLETED) continue;
+            if (staging.getStagingStatus() == StagingStatus.COMPLETED) continue;
             
             // Logic to move Staging -> Car/InventoryCar
             try {
                 Car newCar = new Car();
-                newCar.setCarName(staging.getName() + " " + (staging.getModel() != null ? staging.getModel() : ""));
-                newCar.setSegmentId(1L); // Default segment
-                newCar.setManufacturerId(staging.getManufacturerId() != null ? staging.getManufacturerId() : 1L); 
-                newCar.setDescription("Imported from Crawler");
+                newCar.setName(staging.getName());
+                newCar.setModel(staging.getModel() != null ? staging.getModel() : "Default");
+                newCar.setYear(staging.getYear() != null ? staging.getYear() : java.time.Year.now().getValue());
+                newCar.setSegmentId(1); // Default segment
+                newCar.setManufacturerId(staging.getManufacturerId() != null ? staging.getManufacturerId().intValue() : 1);
                 newCar.setPrice(staging.getPrice());
                 
                 Car savedCar = carRepository.save(newCar);
@@ -185,7 +186,7 @@ public class StagingServiceImpl implements StagingService {
                     }
                 }
                 
-                staging.setStatus(StagingStatus.COMPLETED);
+                staging.setStagingStatus(StagingStatus.COMPLETED);
                 stagingRepository.save(staging);
                 count++;
             } catch (Exception e) {
@@ -202,10 +203,10 @@ public class StagingServiceImpl implements StagingService {
     }
 
     private boolean detectDuplicate(InventoryCarStaging staging) {
-        // Find if a car exists with same name and roughly same year
-        if (staging.getYear() == null) return false;
+        // Find if a car exists with same name and model
+        if (staging.getName() == null) return false;
         
-        Optional<Car> possibleDuplicate = carRepository.findByCarNameContainingIgnoreCase(staging.getName());
-        return possibleDuplicate.isPresent();
+        String model = staging.getModel() != null ? staging.getModel() : "";
+        return carRepository.existsByNameAndModel(staging.getName(), model);
     }
 }

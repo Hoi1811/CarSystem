@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -54,24 +55,13 @@ public class ManufacturerController {
                             .build());
         }
 
-        try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
-            return ResponseEntity.ok(manufacturerService.getAllManufacturers(pageable));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(
-                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
-                            .meta(NoPaginatedMeta.builder()
-                                    .status(Status.ERROR)
-                                    .message("Lỗi khi lấy danh sách hãng sản xuất: " + e.getMessage())
-                                    .build())
-                            .data(null)
-                            .build());
-        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+        return ResponseEntity.ok(manufacturerService.getAllManufacturers(pageable));
     }
 
     @PostMapping(Endpoint.V1.CAR.MANUFACTURER)
     public ResponseEntity<GlobalResponseDTO<?, ?>> createManufacturer(
-            @Valid @RequestPart("name") String name,
+            @NotBlank(message = "Tên hãng sản xuất không được để trống") @RequestPart("name") String name,
             @RequestPart("thumbnailFile") MultipartFile thumbnailFile) throws IOException {
 
         ManufacturerCreateDTO createDTO = new ManufacturerCreateDTO(name, thumbnailFile);
@@ -81,35 +71,20 @@ public class ManufacturerController {
     @PutMapping(Endpoint.V1.CAR.MANUFACTURER_ID)
     public ResponseEntity<GlobalResponseDTO<?, ?>> updateManufacturer(
             @PathVariable Integer id,
-            @Valid @RequestPart("name") String name,
+            @NotBlank(message = "Tên hãng sản xuất không được để trống") @RequestPart("name") String name,
             @RequestPart(value = "thumbnailFile", required = false) MultipartFile thumbnailFile) throws IOException {
 
         ManufacturerUpdateDTO updateDTO = new ManufacturerUpdateDTO(name, thumbnailFile);
         return ResponseEntity.ok(manufacturerService.updateManufacturer(id, updateDTO));
     }
 
+    @GetMapping(Endpoint.V1.CAR.MANUFACTURER_ID)
+    public ResponseEntity<GlobalResponseDTO<?, ?>> getManufacturerById(@PathVariable Integer id) {
+        return ResponseEntity.ok(manufacturerService.getManufacturerById(id));
+    }
+
     @DeleteMapping(Endpoint.V1.CAR.MANUFACTURER_ID)
     public ResponseEntity<GlobalResponseDTO<?, ?>> deleteManufacturer(@PathVariable Integer id) {
-        try {
-            return ResponseEntity.ok(manufacturerService.deleteManufacturer(id));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(
-                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
-                            .meta(NoPaginatedMeta.builder()
-                                    .status(Status.ERROR)
-                                    .message(e.getMessage())
-                                    .build())
-                            .data(null)
-                            .build());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(
-                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
-                            .meta(NoPaginatedMeta.builder()
-                                    .status(Status.ERROR)
-                                    .message("Lỗi khi xóa hãng sản xuất")
-                                    .build())
-                            .data(null)
-                            .build());
-        }
+        return ResponseEntity.ok(manufacturerService.deleteManufacturer(id));
     }
 }

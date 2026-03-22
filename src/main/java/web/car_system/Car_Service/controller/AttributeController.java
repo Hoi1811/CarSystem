@@ -147,7 +147,7 @@ public class AttributeController {
     @PutMapping(Endpoint.V1.ATTRIBUTE.SAVE_ALL_OPTIONS) // Giả sử bạn có endpoint là ".../{id}/options"
     public ResponseEntity<GlobalResponseDTO<?, Void>> saveAllOptions(
             @PathVariable("id") Integer attributeId,
-            @RequestBody List<EnumOrderRequestDTO> optionsPayload) { // Dùng lại DTO cũ hoặc tạo DTO mới
+            @Valid @RequestBody List<EnumOrderRequestDTO> optionsPayload) {
 
         attributeService.saveOrUpdateAllOptions(attributeId, optionsPayload);
 

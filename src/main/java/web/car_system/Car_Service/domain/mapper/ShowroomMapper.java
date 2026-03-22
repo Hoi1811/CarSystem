@@ -16,10 +16,15 @@ public interface ShowroomMapper {
 
     @Mapping(target = "managerId", source = "manager.userId")
     @Mapping(target = "managerName", source = "manager.fullName")
+    @Mapping(target = "status", source = "showroomStatus")
     ShowroomDto toDto(Showroom showroom);
 
+    @Mapping(target = "showroomStatus", source = "status")
+    @Mapping(target = "status", ignore = true)
     Showroom toEntity(CreateShowroomRequest request);
 
+    @Mapping(target = "showroomStatus", source = "status")
+    @Mapping(target = "status", ignore = true)
     void updateEntityFromRequest(UpdateShowroomRequest request, @MappingTarget Showroom showroom);
 
     @Mapping(target = "showroomId", source = "showroom.id")
@@ -29,5 +34,6 @@ public interface ShowroomMapper {
     @Mapping(target = "customerAvatar", source = "customer.picture")
     @Mapping(target = "replyById", source = "replyBy.userId")
     @Mapping(target = "replyByName", source = "replyBy.fullName")
+    @Mapping(target = "status", source = "reviewStatus")
     ShowroomReviewDto toReviewDto(ShowroomReview review);
 }

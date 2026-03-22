@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface TestDriveAppointmentRepository extends JpaRepository<TestDriveAppointment, Long>, JpaSpecificationExecutor<TestDriveAppointment> {
     // Lọc lịch hẹn theo trạng thái
-    Page<TestDriveAppointment> findAllByStatus(AppointmentStatus status, Pageable pageable);
+    Page<TestDriveAppointment> findAllByAppointmentStatus(AppointmentStatus appointmentStatus, Pageable pageable);
 
     // Lấy các lịch hẹn trong một khoảng thời gian (hữu ích cho giao diện Lịch)
     List<TestDriveAppointment> findAllByConfirmedDateTimeBetween(LocalDateTime start, LocalDateTime end);

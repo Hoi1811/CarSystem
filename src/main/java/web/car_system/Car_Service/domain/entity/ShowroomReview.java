@@ -5,12 +5,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 @Entity
 @Table(name = "showroom_reviews")
+@AttributeOverride(name = "status", column = @Column(name = "entity_status"))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @EqualsAndHashCode(callSuper = true)
 public class ShowroomReview extends BaseEntity {
 
@@ -43,8 +46,8 @@ public class ShowroomReview extends BaseEntity {
     private User replyBy;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ReviewStatus status = ReviewStatus.APPROVED;
+    @Column(name = "status", nullable = false)
+    private ReviewStatus reviewStatus = ReviewStatus.APPROVED;
 
     public enum ReviewStatus {
         PENDING,

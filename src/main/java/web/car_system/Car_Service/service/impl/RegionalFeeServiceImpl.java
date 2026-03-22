@@ -4,9 +4,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import web.car_system.Car_Service.domain.dto.regional_fee.CreateRegionalFeeRequest;
 import web.car_system.Car_Service.domain.dto.regional_fee.RegionalFeeDto;
 import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostDto;
 import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostRequest;
+import web.car_system.Car_Service.domain.dto.regional_fee.UpdateRegionalFeeRequest;
 import web.car_system.Car_Service.domain.entity.Car;
 import web.car_system.Car_Service.domain.entity.RegionalFee;
 import web.car_system.Car_Service.domain.mapper.RegionalFeeMapper;
@@ -77,31 +79,25 @@ public class RegionalFeeServiceImpl implements RegionalFeeService {
 
     @Override
     @Transactional
-    public RegionalFeeDto createRegionalFee(RegionalFeeDto request) {
+    public RegionalFeeDto createRegionalFee(CreateRegionalFeeRequest request) {
         // Kiểm tra xem tỉnh/thành đã tồn tại chưa
-        if(regionalFeeRepository.findByProvinceCity(request.getProvinceCity()).isPresent()) {
+        if (regionalFeeRepository.findByProvinceCity(request.getProvinceCity()).isPresent()) {
             throw new IllegalArgumentException("Đã tồn tại cấu hình phí cho khu vực: " + request.getProvinceCity());
         }
 
-        RegionalFee newFee = regionalFeeMapper.toEntity(request);
+        RegionalFee newFee = regionalFeeMapper.fromCreateRequest(request);
         RegionalFee savedFee = regionalFeeRepository.save(newFee);
         return regionalFeeMapper.toDto(savedFee);
     }
 
     @Override
     @Transactional
-    public RegionalFeeDto updateRegionalFee(Long id, RegionalFeeDto request) {
+    public RegionalFeeDto updateRegionalFee(Long id, UpdateRegionalFeeRequest request) {
         RegionalFee existingFee = regionalFeeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy cấu hình phí với ID: " + id));
 
-        // Cập nhật các trường...
-        existingFee.setProvinceCity(request.getProvinceCity());
-        existingFee.setRegistrationFeeRate(request.getRegistrationFeeRate());
-        existingFee.setLicensePlateFee(request.getLicensePlateFee());
-        existingFee.setRoadUsageFee(request.getRoadUsageFee());
-        existingFee.setCivilLiabilityInsuranceFee(request.getCivilLiabilityInsuranceFee());
-
-        // ...cập nhật các trường phí còn lại
+        // Chỉ cập nhật các field không null (partial update)
+        regionalFeeMapper.updateEntityFromRequest(request, existingFee);
 
         RegionalFee updatedFee = regionalFeeRepository.save(existingFee);
         return regionalFeeMapper.toDto(updatedFee);

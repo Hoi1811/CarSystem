@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +27,7 @@ public class CarTypeController {
 
     @PostMapping(Endpoint.V1.CAR.CAR_TYPE)
     public ResponseEntity<GlobalResponseDTO<?, ?>> createCarType(
-            @Valid @RequestPart("name") String name,
+            @NotBlank(message = "Tên loại xe không được để trống") @RequestPart("name") String name,
             @RequestPart(value = "description", required = false) String description,
             @RequestPart("thumbnailFile") MultipartFile thumbnailFile) throws IOException {
 
@@ -56,7 +57,7 @@ public class CarTypeController {
     @PutMapping(Endpoint.V1.CAR.CAR_TYPE_ID)
     public ResponseEntity<GlobalResponseDTO<?, ?>> updateCarType(
             @PathVariable Integer typeId,
-            @Valid @RequestPart("name") String name,
+            @NotBlank(message = "Tên loại xe không được để trống") @RequestPart("name") String name,
             @RequestPart(value = "description", required = false) String description,
             @RequestPart(value = "thumbnailFile", required = false) MultipartFile thumbnailFile) throws IOException {
 

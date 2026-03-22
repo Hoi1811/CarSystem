@@ -1,8 +1,10 @@
 package web.car_system.Car_Service.service;
 
+import web.car_system.Car_Service.domain.dto.regional_fee.CreateRegionalFeeRequest;
 import web.car_system.Car_Service.domain.dto.regional_fee.RegionalFeeDto;
 import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostDto;
 import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostRequest;
+import web.car_system.Car_Service.domain.dto.regional_fee.UpdateRegionalFeeRequest;
 
 import java.util.List;
 
@@ -22,9 +24,9 @@ public interface RegionalFeeService {
 
     List<RegionalFeeDto> getAllRegionalFees();
 
-    RegionalFeeDto createRegionalFee(RegionalFeeDto request);
+    RegionalFeeDto createRegionalFee(CreateRegionalFeeRequest request);
 
-    RegionalFeeDto updateRegionalFee(Long id, RegionalFeeDto request);
+    RegionalFeeDto updateRegionalFee(Long id, UpdateRegionalFeeRequest request);
 
     void deleteRegionalFee(Long id);
 }

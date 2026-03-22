@@ -15,7 +15,7 @@ import web.car_system.Car_Service.domain.entity.User;
 import web.car_system.Car_Service.domain.mapper.ShowroomMapper;
 import web.car_system.Car_Service.repositories.ShowroomRepository;
 import web.car_system.Car_Service.repositories.ShowroomReviewRepository;
-import web.car_system.Car_Service.repositories.UserRepository;
+import web.car_system.Car_Service.repository.UserRepository;
 import web.car_system.Car_Service.service.ShowroomService;
 
 import java.math.BigDecimal;
@@ -40,13 +40,13 @@ public class ShowroomServiceImpl implements ShowroomService {
     public Page<ShowroomDto> getAllShowrooms(String keyword, ShowroomStatus status, Pageable pageable) {
         if (keyword != null && !keyword.trim().isEmpty()) {
             if (status != null) {
-                return showroomRepository.findByNameContainingIgnoreCaseAndStatus(keyword, status, pageable)
+                return showroomRepository.findByNameContainingIgnoreCaseAndShowroomStatus(keyword, status, pageable)
                         .map(showroomMapper::toDto);
             }
             return showroomRepository.findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(keyword, keyword, pageable)
                     .map(showroomMapper::toDto);
         } else if (status != null) {
-            return showroomRepository.findByStatus(status, pageable)
+            return showroomRepository.findByShowroomStatus(status, pageable)
                     .map(showroomMapper::toDto);
         }
         return showroomRepository.findAll(pageable)
@@ -105,7 +105,7 @@ public class ShowroomServiceImpl implements ShowroomService {
     public void switchShowroomStatus(Long id, ShowroomStatus status) {
         Showroom showroom = showroomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Showroom not found"));
-        showroom.setStatus(status);
+        showroom.setShowroomStatus(status);
         showroomRepository.save(showroom);
     }
 
@@ -124,14 +124,14 @@ public class ShowroomServiceImpl implements ShowroomService {
     @Override
     @Transactional(readOnly = true)
     public Page<ShowroomReviewDto> getReviewsByShowroom(Long showroomId, Pageable pageable) {
-        return reviewRepository.findByShowroomIdAndStatus(showroomId, ReviewStatus.APPROVED, pageable)
+        return reviewRepository.findByShowroomIdAndReviewStatus(showroomId, ReviewStatus.APPROVED, pageable)
                 .map(showroomMapper::toReviewDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ShowroomReviewDto> getReviewsByCustomer(Long customerId, Pageable pageable) {
-        return reviewRepository.findByCustomerId(customerId, pageable)
+        return reviewRepository.findByCustomerUserId(customerId, pageable)
                 .map(showroomMapper::toReviewDto);
     }
 
@@ -157,7 +157,7 @@ public class ShowroomServiceImpl implements ShowroomService {
                 .orderId(request.getOrderId())
                 .rating(request.getRating())
                 .comment(request.getComment())
-                .status(ReviewStatus.APPROVED) // Auto-approve for simplicity
+                .reviewStatus(ReviewStatus.APPROVED) // Auto-approve for simplicity
                 .build();
 
         ShowroomReview savedReview = reviewRepository.save(review);

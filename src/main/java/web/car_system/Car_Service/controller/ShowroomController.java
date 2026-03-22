@@ -67,20 +67,22 @@ public class ShowroomController {
 
     @PreAuthorize("hasAnyRole('CUSTOMER', 'USER')")
     @PostMapping("/customer/showrooms/reviews")
-    public ResponseEntity<ShowroomReviewDto> submitReview(
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, ShowroomReviewDto>> submitReview(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ShowroomReviewRequest request) {
-        return ResponseEntity.ok(showroomService.submitReview(user.getUserId(), request));
+        ShowroomReviewDto review = showroomService.submitReview(user.getUserId(), request);
+        return success(review, "Gửi đánh giá thành công.");
     }
 
     @PreAuthorize("hasAnyRole('CUSTOMER', 'USER')")
     @GetMapping("/customer/showrooms/reviews")
-    public ResponseEntity<Page<ShowroomReviewDto>> getMyReviews(
+    public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<ShowroomReviewDto>>> getMyReviews(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(showroomService.getReviewsByCustomer(user.getUserId(), pageable));
+        Page<ShowroomReviewDto> result = showroomService.getReviewsByCustomer(user.getUserId(), pageable);
+        return successPageable(result, "Lấy danh sách đánh giá của tôi thành công.");
     }
 
     // ============================================
@@ -89,11 +91,12 @@ public class ShowroomController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'SYSTEM_ADMIN')")
     @PutMapping("/sales/showroom-reviews/{id}/reply")
-    public ResponseEntity<ShowroomReviewDto> replyToReview(
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, ShowroomReviewDto>> replyToReview(
             @PathVariable Long id,
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ReplyReviewRequest request) {
-        return ResponseEntity.ok(showroomService.replyToReview(id, user.getUserId(), request));
+        ShowroomReviewDto review = showroomService.replyToReview(id, user.getUserId(), request);
+        return success(review, "Phản hồi đánh giá thành công.");
     }
 
     // ============================================
@@ -102,42 +105,45 @@ public class ShowroomController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
     @GetMapping("/admin/showrooms")
-    public ResponseEntity<Page<ShowroomDto>> getAllShowroomsForAdmin(
+    public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<ShowroomDto>>> getAllShowroomsForAdmin(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) ShowroomStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(showroomService.getAllShowrooms(keyword, status, pageable));
+        Page<ShowroomDto> result = showroomService.getAllShowrooms(keyword, status, pageable);
+        return successPageable(result, "Lấy danh sách chi nhánh thành công.");
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
     @PostMapping("/admin/showrooms")
-    public ResponseEntity<ShowroomDto> createShowroom(@Valid @RequestBody CreateShowroomRequest request) {
-        return ResponseEntity.ok(showroomService.createShowroom(request));
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, ShowroomDto>> createShowroom(@Valid @RequestBody CreateShowroomRequest request) {
+        ShowroomDto showroom = showroomService.createShowroom(request);
+        return success(showroom, "Tạo chi nhánh thành công.");
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
     @PutMapping("/admin/showrooms/{id}")
-    public ResponseEntity<ShowroomDto> updateShowroom(
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, ShowroomDto>> updateShowroom(
             @PathVariable Long id,
             @Valid @RequestBody UpdateShowroomRequest request) {
-        return ResponseEntity.ok(showroomService.updateShowroom(id, request));
+        ShowroomDto showroom = showroomService.updateShowroom(id, request);
+        return success(showroom, "Cập nhật chi nhánh thành công.");
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
-    @PutMapping("/admin/showrooms/{id}/status")
-    public ResponseEntity<Void> switchShowroomStatus(
+    @PatchMapping("/admin/showrooms/{id}/status")
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> switchShowroomStatus(
             @PathVariable Long id,
             @RequestParam ShowroomStatus status) {
         showroomService.switchShowroomStatus(id, status);
-        return ResponseEntity.ok().build();
+        return success(null, "Cập nhật trạng thái chi nhánh thành công.");
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
     @DeleteMapping("/admin/showrooms/{id}")
-    public ResponseEntity<Void> deleteShowroom(@PathVariable Long id) {
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> deleteShowroom(@PathVariable Long id) {
         showroomService.deleteShowroom(id);
-        return ResponseEntity.ok().build();
+        return success(null, "Xóa chi nhánh thành công.");
     }
 }
