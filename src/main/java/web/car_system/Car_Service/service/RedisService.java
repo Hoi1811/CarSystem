@@ -14,6 +14,9 @@ public interface RedisService {
     // Xóa dữ liệu khỏi cache
     void deleteFromCache(String key);
 
+    // Xóa tất cả cache có prefix
+    void deleteKeysWithPrefix(String prefix);
+
     // Xóa toàn bộ cache (nếu cần)
     void clearAllCache();
 }

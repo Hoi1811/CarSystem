@@ -179,7 +179,8 @@ public class SecurityConfig {
     private final List<String> ALLOWED_HEADERS      = List.of(
             HttpHeaders.AUTHORIZATION,
             HttpHeaders.ACCEPT_LANGUAGE,
-            HttpHeaders.CONTENT_TYPE
+            HttpHeaders.CONTENT_TYPE,
+            "X-Tenant-ID"
     );
     private final List<String> EXPOSED_HEADERS      = List.of(
             HttpHeaders.AUTHORIZATION,

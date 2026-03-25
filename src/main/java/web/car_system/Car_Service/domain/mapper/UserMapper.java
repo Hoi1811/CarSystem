@@ -19,6 +19,9 @@ public interface UserMapper {
 
     // Map Entity -> ResponseDTO
     @Mapping(source = "roles", target = "roles")
+    @Mapping(source = "showroom.id", target = "showroomId")
+    @Mapping(source = "showroom.name", target = "showroomName")
+    @Mapping(source = "showroom.code", target = "showroomCode")
     UserResponseDTO toDTO(User user);
 
     // Cập nhật Entity từ RequestDTO (không thay đổi ID và roles)

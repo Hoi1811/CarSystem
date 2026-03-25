@@ -29,4 +29,9 @@ public class InventoryCarDto {
 
     // Thông tin từ Manufacturer
     private String manufacturerName;
+
+    // Thông tin Showroom (chi nhánh)
+    private Long showroomId;
+    private String showroomName;
+    private String showroomCode;
 }

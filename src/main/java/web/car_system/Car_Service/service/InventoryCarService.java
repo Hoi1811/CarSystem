@@ -23,6 +23,7 @@ public interface InventoryCarService {
 
     /**
      * Lấy danh sách TẤT CẢ xe trong kho cho Admin quản lý, có phân trang.
+     * Dữ liệu tự động cách ly theo chi nhánh nhờ Hibernate Filter (TenantFilterAspect).
      * @param pageable Thông tin phân trang.
      * @return Một trang (Page) chứa các InventoryCarDto.
      */

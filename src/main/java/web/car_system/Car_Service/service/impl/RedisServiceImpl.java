@@ -47,6 +47,14 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
+    public void deleteKeysWithPrefix(String prefix) {
+        var keys = redisTemplate.keys(prefix + "*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
+    @Override
     public void clearAllCache() {
         redisTemplate.getConnectionFactory().getConnection().flushAll();
     }

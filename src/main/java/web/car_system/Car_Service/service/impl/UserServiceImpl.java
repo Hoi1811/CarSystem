@@ -266,14 +266,16 @@ public class UserServiceImpl implements UserService {
                     .map(name -> roleRepository.findByName(name)
                             .orElseThrow(() -> new NotFoundException("Role not found: " + name)))
                     .collect(Collectors.toSet());
-            user.getRoles().addAll(roles);
+            user.setRoles(roles);
             userRepository.save(user);
             NoPaginatedMeta meta = NoPaginatedMeta.builder()
                     .status(Status.SUCCESS)
                     .message("Roles assigned to user successfully")
                     .build();
-            // Xóa cache
+            // Xóa cache user + danh sách
             redisService.deleteFromCache(cacheKey);
+            redisService.deleteKeysWithPrefix("users:all:");
+            redisService.deleteKeysWithPrefix("userRoles:" + userId);
             return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                     .meta(meta)
                     .build();

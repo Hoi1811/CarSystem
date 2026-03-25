@@ -13,5 +13,9 @@ public record UserResponseDTO(
         String fullName,
         String provider,
         LocalDateTime createdAt,
-        Set<RoleResponseDTO> roles  // Nested DTO
+        Set<RoleResponseDTO> roles,  // Nested DTO
+        // Showroom info (chi nhánh mà user thuộc về, null nếu là System Admin)
+        Long showroomId,
+        String showroomName,
+        String showroomCode
 ) {}

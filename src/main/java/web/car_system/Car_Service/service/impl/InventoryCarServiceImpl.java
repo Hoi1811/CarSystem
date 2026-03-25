@@ -1,27 +1,37 @@
 package web.car_system.Car_Service.service.impl;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import web.car_system.Car_Service.domain.dto.inventory_car.CreateInventoryCarRequest;
 import web.car_system.Car_Service.domain.dto.inventory_car.InventoryCarDto;
 import web.car_system.Car_Service.domain.entity.Car;
 import web.car_system.Car_Service.domain.entity.InventoryCar;
 import web.car_system.Car_Service.domain.entity.SaleStatus;
+import web.car_system.Car_Service.domain.entity.Showroom;
+import web.car_system.Car_Service.domain.entity.User;
 import web.car_system.Car_Service.domain.mapper.InventoryCarMapper;
 import web.car_system.Car_Service.repository.CarRepository;
 import web.car_system.Car_Service.repository.InventoryCarRepository;
+import web.car_system.Car_Service.repositories.ShowroomRepository;
 import web.car_system.Car_Service.service.InventoryCarService;
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryCarServiceImpl implements InventoryCarService {
     private final InventoryCarRepository inventoryCarRepository;
     private final CarRepository carRepository;
-
-    private final InventoryCarMapper inventoryCarMapper; // Tiêm Mapper vào
+    private final ShowroomRepository showroomRepository;
+    private final InventoryCarMapper inventoryCarMapper;
 
     @Override
     @Transactional
@@ -38,6 +48,9 @@ public class InventoryCarServiceImpl implements InventoryCarService {
 
         // Bước 2: Gán các đối tượng quan hệ thủ công
         newInventoryCar.setCar(carTemplate);
+
+        // Tự động gán showroom từ context người dùng đang đăng nhập (Multi-tenant)
+        newInventoryCar.setShowroom(resolveActiveShowroom());
 
         // Bước 3: Xử lý các giá trị mặc định (nếu có)
         if (newInventoryCar.getSaleStatus() == null) {
@@ -70,11 +83,10 @@ public class InventoryCarServiceImpl implements InventoryCarService {
     @Override
     @Transactional(readOnly = true)
     public Page<InventoryCarDto> getAllInventoryCarsForAdmin(Pageable pageable) {
-        // Dùng phương thức findAll mặc định của JpaRepository
-        Page<InventoryCar> allCarsPage = inventoryCarRepository.findAll(pageable);
-
-        // Tương tự, dùng map để chuyển đổi sang DTO
-        return allCarsPage.map(inventoryCarMapper::toDto);
+        // Hibernate Filter (TenantFilterAspect) tự động gắn WHERE showroom_id = :tenantId
+        // SYSTEM_ADMIN không có filter → thấy toàn bộ
+        // Staff/Manager → chỉ thấy xe chi nhánh mình
+        return inventoryCarRepository.findAll(pageable).map(inventoryCarMapper::toDto);
     }
 
     @Override
@@ -118,6 +130,9 @@ public class InventoryCarServiceImpl implements InventoryCarService {
         existingCar.setMileage(request.getMileage());
         existingCar.setYearOfManufacture(request.getYearOfManufacture());
         existingCar.setNotes(request.getNotes());
+
+        // Giữ nguyên showroom hiện tại — không cho client thay đổi
+        // Showroom được quyết định bởi TenantFilterAspect, không phải từ request
 
         // Bước 5: Spring Data JPA sẽ tự động lưu lại các thay đổi vào DB
         // khi transaction kết thúc, nên không cần gọi save() một cách tường minh.
@@ -171,5 +186,44 @@ public class InventoryCarServiceImpl implements InventoryCarService {
         // Spring Data JPA và Hibernate sẽ tự động xử lý để thực hiện câu lệnh UPDATE
         // thay vì DELETE nhờ vào annotation @SQLDelete trong Entity.
         inventoryCarRepository.deleteById(id);
+    }
+
+    // ===== HELPER: Xác định Showroom dựa trên SecurityContext =====
+
+    /**
+     * Xác định showroom hiện tại dựa trên user đang đăng nhập.
+     * - Staff/Manager: trả về showroom đã gán trên tài khoản.
+     * - System Admin: đọc header X-Tenant-ID để biết đang thao tác chi nhánh nào.
+     * - Nếu không xác định được: trả về null (xe không gán chi nhánh).
+     */
+    private Showroom resolveActiveShowroom() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !(auth.getPrincipal() instanceof User)) return null;
+
+            User currentUser = (User) auth.getPrincipal();
+
+            // Staff/Manager: luôn gán theo showroom của họ
+            if (currentUser.getShowroom() != null) {
+                return currentUser.getShowroom();
+            }
+
+            // System Admin: đọc X-Tenant-ID header
+            boolean isAdmin = currentUser.getRoles().stream()
+                    .anyMatch(role -> role.getName().equals("ROLE_SYSTEM_ADMIN") || role.getName().equals("SYSTEM_ADMIN"));
+            if (isAdmin) {
+                ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+                if (attrs != null) {
+                    String tenantHeader = attrs.getRequest().getHeader("X-Tenant-ID");
+                    if (tenantHeader != null && !tenantHeader.isEmpty()) {
+                        return showroomRepository.findById(Long.parseLong(tenantHeader))
+                                .orElse(null);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Không thể xác định showroom cho xe mới: {}", e.getMessage());
+        }
+        return null;
     }
 }

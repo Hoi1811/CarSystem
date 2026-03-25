@@ -23,16 +23,19 @@ public interface InventoryCarMapper {
             @Mapping(source = "car.year", target = "carYear"),
             @Mapping(source = "car.thumbnail", target = "carThumbnail"),
             // Lấy thông tin từ 'manufacturer' lồng trong 'car'
-            @Mapping(source = "car.manufacturer.name", target = "manufacturerName")
+            @Mapping(source = "car.manufacturer.name", target = "manufacturerName"),
+            // Lấy thông tin từ 'showroom' lồng trong InventoryCar
+            @Mapping(source = "showroom.id", target = "showroomId"),
+            @Mapping(source = "showroom.name", target = "showroomName"),
+            @Mapping(source = "showroom.code", target = "showroomCode")
     })
     InventoryCarDto toDto(InventoryCar inventoryCar);
 
     /**
      * Chuyển đổi từ Request DTO (CreateInventoryCarRequest) sang Entity (InventoryCar).
-     * Chức năng này sẽ được dùng trong cả phương thức create và update.
-     * Lưu ý: Chúng ta sẽ không map carId vì nó cần được xử lý riêng.
      */
-    @Mapping(target = "id", ignore = true) // Bỏ qua id khi tạo mới
-    @Mapping(target = "car", ignore = true) // Bỏ qua car vì sẽ được gán thủ công
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "car", ignore = true)
+    @Mapping(target = "showroom", ignore = true) // Sẽ được gán thủ công trong service
     InventoryCar toEntity(CreateInventoryCarRequest request);
 }
