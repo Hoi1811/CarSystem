@@ -12,6 +12,8 @@ public class Endpoint {
             public static final String OAUTH2CALLBACK = PREFIX + "/oauth2/callback";
             public static final String REFRESH_TOKEN = PREFIX + "/refresh-token";
             public static final String VALIDATE_ADMIN = PREFIX + "/validate-admin";
+            public static final String FORGOT_PASSWORD = PREFIX + "/forgot-password";
+            public static final String RESET_PASSWORD = PREFIX + "/reset-password";
         }
 
         public static final class CAR{
@@ -89,6 +91,10 @@ public class Endpoint {
             public static final String USER_AUTHORITIES = USER + "/{userId}/authorities";
             public static final String USER_ROLES = USER + "/{userId}/roles";
             public static final String USER_PERMISSIONS = USER + "/{userId}/permissions";
+            // Admin-only user management endpoints
+            public static final String ADMIN_CREATE = USER + "/admin-create";
+            public static final String ADMIN_RESET_PASSWORD = USER + "/{userId}/reset-password";
+            public static final String ADMIN_TOGGLE_STATUS = USER + "/{userId}/status";
         }
         public static final class CHATBOT{
             public static final String PREFIX = V1.PREFIX + "/chatbot";
@@ -180,6 +186,8 @@ public class Endpoint {
         // 2. Endpoint CRUD cho Admin quản lý phí
         public static final class REGIONAL_FEE {
             public static final String ADMIN_PREFIX = V1.PREFIX + "/admin/regional-fees";
+            public static final String PUBLIC_PREFIX = V1.PREFIX + "/regional-fees";
+            public static final String GET_ALL_PUBLIC = PUBLIC_PREFIX;          // GET
             public static final String GET_ALL = ADMIN_PREFIX;          // GET
             public static final String CREATE = ADMIN_PREFIX;             // POST
             public static final String UPDATE = ADMIN_PREFIX + "/{id}";     // PUT

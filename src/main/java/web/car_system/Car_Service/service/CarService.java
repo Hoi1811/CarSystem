@@ -30,4 +30,6 @@ public interface CarService {
     GlobalResponseDTO<NoPaginatedMeta, List<OptionProjection>> findRelatedCarNamesByCarName(FindRelatedCarsRequestDTO requestDTO);
     List<CarSuggestionDto> findSimilarCars(Integer carId);
     void updateStatus(Integer carId, EntityStatus newStatus);
+    void updateApprovalStatus(Integer carId, web.car_system.Car_Service.domain.entity.CarStatus approvalStatus);
+    GlobalResponseDTO<PaginatedMeta, List<CarResponseDTO>> getCarsByApprovalStatus(web.car_system.Car_Service.domain.entity.CarStatus status, int page);
 }

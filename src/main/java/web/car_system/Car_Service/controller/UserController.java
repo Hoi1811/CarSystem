@@ -1,5 +1,6 @@
 package web.car_system.Car_Service.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,9 @@ import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
+import web.car_system.Car_Service.domain.dto.user.AdminCreateUserRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.AdminResetPasswordRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.UpdateUserStatusRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserAuthoritiesDTO;
 import web.car_system.Car_Service.domain.dto.user.UserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserResponseDTO;
@@ -169,6 +173,43 @@ public class UserController {
             @RequestParam(defaultValue = "0") int pageIndex,
             @RequestParam(defaultValue = "10") short pageSize) {
         GlobalResponseDTO<PaginatedMeta, List<UserResponseDTO>> response = userService.getAllUsers(pageIndex, pageSize);
+        if (response.meta().status() == Status.SUCCESS) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.status(400).body(response);
+    }
+
+    // ===================== ADMIN-ONLY OPERATIONS =====================
+
+    @PostMapping(Endpoint.V1.USER.ADMIN_CREATE)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO>> adminCreateUser(
+            @Valid @RequestBody AdminCreateUserRequestDTO request) {
+        GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> response = userService.adminCreateUser(request);
+        if (response.meta().status() == Status.SUCCESS) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        }
+        return ResponseEntity.status(400).body(response);
+    }
+
+    @PatchMapping(Endpoint.V1.USER.ADMIN_RESET_PASSWORD)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> adminResetPassword(
+            @PathVariable("userId") Long userId,
+            @Valid @RequestBody AdminResetPasswordRequestDTO request) {
+        GlobalResponseDTO<NoPaginatedMeta, Void> response = userService.adminResetPassword(userId, request.newPassword());
+        if (response.meta().status() == Status.SUCCESS) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.status(400).body(response);
+    }
+
+    @PatchMapping(Endpoint.V1.USER.ADMIN_TOGGLE_STATUS)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> toggleUserStatus(
+            @PathVariable("userId") Long userId,
+            @Valid @RequestBody UpdateUserStatusRequestDTO request) {
+        GlobalResponseDTO<NoPaginatedMeta, Void> response = userService.toggleUserStatus(userId, request.isEnabled());
         if (response.meta().status() == Status.SUCCESS) {
             return ResponseEntity.ok(response);
         }

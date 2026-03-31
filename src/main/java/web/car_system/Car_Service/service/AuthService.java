@@ -17,5 +17,6 @@ public interface AuthService {
     void refreshToken(String refreshToken,  HttpServletResponse response);
     void addTokensToCookies(Map<String, String> tokens, boolean rememberMe, HttpServletResponse response);
     void logout(HttpServletResponse response, HttpServletRequest request);
-
+    void forgotPassword(String email);
+    void resetPassword(String token, String newPassword, String confirmPassword);
 }

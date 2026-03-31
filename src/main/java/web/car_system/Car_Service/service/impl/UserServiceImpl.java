@@ -7,9 +7,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import web.car_system.Car_Service.domain.dto.global.*;
+import web.car_system.Car_Service.domain.dto.user.AdminCreateUserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserResponseDTO;
 import web.car_system.Car_Service.domain.entity.Role;
@@ -33,6 +34,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RedisService redisService;
 
@@ -344,5 +346,95 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> findByUserId(Long userId) {
         return userRepository.findById(userId);
+    }
+
+    // ===================== ADMIN-ONLY OPERATIONS =====================
+
+    @Override
+    @Transactional
+    public GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> adminCreateUser(AdminCreateUserRequestDTO request) {
+        try {
+            if (userRepository.findByUsername(request.username()).isPresent()) {
+                return GlobalResponseDTO.<NoPaginatedMeta, UserResponseDTO>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Username đã tồn tại").build())
+                        .build();
+            }
+            if (userRepository.findByEmail(request.email()).isPresent()) {
+                return GlobalResponseDTO.<NoPaginatedMeta, UserResponseDTO>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Email đã tồn tại").build())
+                        .build();
+            }
+            User user = new User();
+            user.setUsername(request.username());
+            user.setPassword(passwordEncoder.encode(request.password()));
+            user.setEmail(request.email());
+            user.setFullName(request.fullName());
+            user.setEnabled(true);
+            User savedUser = userRepository.save(user);
+
+            // Gán roles — nếu không chỉ định thì dùng ROLE_USER mặc định
+            List<String> rolesToAssign = (request.roles() != null && !request.roles().isEmpty())
+                    ? request.roles()
+                    : List.of("ROLE_USER");
+            for (String roleName : rolesToAssign) {
+                Role role = roleRepository.findByName(roleName).orElse(null);
+                if (role != null) {
+                    savedUser.getRoles().add(role);
+                }
+            }
+            userRepository.save(savedUser);
+
+            UserResponseDTO dto = userMapper.toDTO(savedUser);
+            return GlobalResponseDTO.<NoPaginatedMeta, UserResponseDTO>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Tạo tài khoản thành công").build())
+                    .data(dto)
+                    .build();
+        } catch (Exception e) {
+            return GlobalResponseDTO.<NoPaginatedMeta, UserResponseDTO>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Tạo tài khoản thất bại: " + e.getMessage()).build())
+                    .build();
+        }
+    }
+
+    @Override
+    @Transactional
+    public GlobalResponseDTO<NoPaginatedMeta, Void> adminResetPassword(Long userId, String newPassword) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            // Xóa cache authorities để buộc re-auth
+            redisService.deleteFromCache("users:" + userId);
+            redisTemplate.delete("user_authorities:" + userId);
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Đặt lại mật khẩu thành công").build())
+                    .build();
+        } catch (Exception e) {
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.ERROR).message(e.getMessage()).build())
+                    .build();
+        }
+    }
+
+    @Override
+    @Transactional
+    public GlobalResponseDTO<NoPaginatedMeta, Void> toggleUserStatus(Long userId, boolean isEnabled) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+            user.setEnabled(isEnabled);
+            userRepository.save(user);
+            redisService.deleteFromCache("users:" + userId);
+            redisTemplate.delete("user_authorities:" + userId);
+            String msg = isEnabled ? "Kích hoạt tài khoản thành công" : "Vô hiệu hóa tài khoản thành công";
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message(msg).build())
+                    .build();
+        } catch (Exception e) {
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.ERROR).message(e.getMessage()).build())
+                    .build();
+        }
     }
 }

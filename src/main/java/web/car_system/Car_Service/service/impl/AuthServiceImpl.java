@@ -26,6 +26,7 @@ import web.car_system.Car_Service.domain.dto.user.UserAuthoritiesDTO;
 import web.car_system.Car_Service.domain.entity.User;
 import web.car_system.Car_Service.repository.UserRepository;
 import web.car_system.Car_Service.service.AuthService;
+import web.car_system.Car_Service.service.EmailService;
 import web.car_system.Car_Service.service.RoleService;
 import web.car_system.Car_Service.service.UserService;
 import web.car_system.Car_Service.utility.JwtTokenUtil;
@@ -51,6 +52,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
     private final RoleService roleService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final EmailService emailService;
     private static final Logger log = Logger.getLogger(AuthServiceImpl.class.getName());
 
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -243,6 +245,9 @@ public class AuthServiceImpl implements AuthService {
         if (user.getDeletedAt() != null) {
             throw new RuntimeException("User account is deleted");
         }
+        if (!user.isEnabled()) {
+            throw new RuntimeException("Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+        }
 
         Map<String, String> tokens = jwtTokenUtil.generateTokenPair(user);
         addTokensToCookies(tokens, rememberMe, response);
@@ -368,4 +373,47 @@ public class AuthServiceImpl implements AuthService {
         response.addHeader("Set-Cookie", refreshCookie.toString());
         log.info("accessCookie: " + accessCookie.toString());
 }
+
+    // ===================== FORGOT / RESET PASSWORD =====================
+
+    @Value("${app.frontend.base-url:http://localhost:4200}")
+    private String frontendBaseUrl;
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        // Luôn trả về bình thường dù email tồn tại hay không (chống user enumeration)
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            redisTemplate.opsForValue().set(
+                    "pwd_reset:" + token,
+                    user.getUserId().toString(),
+                    15, TimeUnit.MINUTES
+            );
+            String resetLink = frontendBaseUrl + "/auth/reset-password?token=" + token;
+            emailService.sendPasswordResetEmail(user.getEmail(), resetLink);
+        });
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new RuntimeException("Mật khẩu xác nhận không khớp");
+        }
+        String redisKey = "pwd_reset:" + token;
+        String userIdStr = (String) redisTemplate.opsForValue().get(redisKey);
+        if (userIdStr == null) {
+            throw new RuntimeException("Token không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.");
+        }
+        // Xóa token ngay lập tức (one-time use)
+        redisTemplate.delete(redisKey);
+
+        User user = userRepository.findById(Long.parseLong(userIdStr))
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        // Xóa cache authorities để buộc re-authenticate
+        redisTemplate.delete("user_authorities:" + userIdStr);
+    }
 }

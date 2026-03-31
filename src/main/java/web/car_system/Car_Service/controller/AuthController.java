@@ -13,8 +13,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import web.car_system.Car_Service.annotation.RestApiV1;
 import web.car_system.Car_Service.constant.Endpoint;
+import web.car_system.Car_Service.domain.dto.auth.ForgotPasswordRequestDTO;
 import web.car_system.Car_Service.domain.dto.auth.LoginRequestDTO;
 import web.car_system.Car_Service.domain.dto.auth.RegisterRequestDTO;
+import web.car_system.Car_Service.domain.dto.auth.ResetPasswordRequestDTO;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
@@ -246,10 +248,44 @@ public class AuthController {
         }
     }
 
+    @PostMapping(Endpoint.V1.AUTH.FORGOT_PASSWORD)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequestDTO request) {
+        // Luôn trả về SUCCESS dù email tồn tại hay không (chống user enumeration)
+        authService.forgotPassword(request.email());
+        return ResponseEntity.ok(GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                .meta(NoPaginatedMeta.builder()
+                        .status(Status.SUCCESS)
+                        .message("Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu trong vài phút.")
+                        .build())
+                .build());
+    }
+
+    @PostMapping(Endpoint.V1.AUTH.RESET_PASSWORD)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequestDTO request) {
+        try {
+            authService.resetPassword(request.token(), request.newPassword(), request.confirmPassword());
+            return ResponseEntity.ok(GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder()
+                            .status(Status.SUCCESS)
+                            .message("Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.")
+                            .build())
+                    .build());
+        } catch (Exception e) {
+            logger.warn("Reset password failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(
+                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                            .meta(NoPaginatedMeta.builder()
+                                    .status(Status.ERROR)
+                                    .message(e.getMessage())
+                                    .build())
+                            .build());
+        }
+    }
+
     /**
      * Lấy IP address của client dùng cho brute-force tracking.
-     * Dùng getRemoteAddr() để tránh bị giả mạo qua header X-Forwarded-For.
-     * Nếu chạy sau một trusted reverse proxy, cấu hình proxy để ghi đè RemoteAddr ở server level.
      */
     private String getClientIP(HttpServletRequest request) {
         return request.getRemoteAddr();

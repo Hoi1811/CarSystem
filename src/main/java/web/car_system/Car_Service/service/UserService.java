@@ -5,6 +5,7 @@ package web.car_system.Car_Service.service;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
+import web.car_system.Car_Service.domain.dto.user.AdminCreateUserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserResponseDTO;
 import web.car_system.Car_Service.domain.entity.Role;
@@ -32,4 +33,9 @@ public interface UserService {
     Optional<User> findByUsername(String username);
 
     Optional<User> findByUserId(Long userId);
+
+    // === Admin-only operations ===
+    GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> adminCreateUser(AdminCreateUserRequestDTO request);
+    GlobalResponseDTO<NoPaginatedMeta, Void> adminResetPassword(Long userId, String newPassword);
+    GlobalResponseDTO<NoPaginatedMeta, Void> toggleUserStatus(Long userId, boolean isEnabled);
 }

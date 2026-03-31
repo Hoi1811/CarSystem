@@ -46,7 +46,9 @@ public class SecurityConfig {
                                 Endpoint.V1.AUTH.OAUTH2CALLBACK,
                                 Endpoint.V1.AUTH.REGISTER,
                                 Endpoint.V1.AUTH.REFRESH_TOKEN,
-                                Endpoint.V1.AUTH.LOGOUT
+                                Endpoint.V1.AUTH.LOGOUT,
+                                Endpoint.V1.AUTH.FORGOT_PASSWORD,
+                                Endpoint.V1.AUTH.RESET_PASSWORD
                         ).permitAll()
                         .requestMatchers("actualtor/**").permitAll()
                         .requestMatchers(Endpoint.V1.OPTIONS.OPTIONS_BY_SOURCE_NAME).permitAll()
@@ -59,6 +61,8 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_ALL_AVAILABLE).permitAll()
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_DETAILS_BY_ID).permitAll()
                         .requestMatchers(Endpoint.V1.RECOMMENDATION.GET_SUGGESTIONS).permitAll()
+                        .requestMatchers(POST, Endpoint.V1.CAR.CALCULATE_ROLLING_COST).permitAll()
+                        .requestMatchers(GET, Endpoint.V1.REGIONAL_FEE.PUBLIC_PREFIX).permitAll()
                         // Apriori Recommendations: GET public, POST generate-rules admin only
                         .requestMatchers(GET, "/api/v1/apriori-recommendations/**").permitAll()
                         .requestMatchers(POST, "/api/v1/apriori-recommendations/generate-rules").hasAuthority("ROLE_ADMIN")

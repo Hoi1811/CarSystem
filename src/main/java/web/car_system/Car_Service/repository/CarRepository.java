@@ -34,6 +34,11 @@ public interface CarRepository extends JpaRepository<Car, Integer>, JpaSpecifica
             "WHERE c.carId = :id")
     Optional<Car> findByIdWithDetails(@Param("id") Integer id);
 
+    Page<Car> findAll(Pageable pageable);
+
+    @Query("SELECT c FROM Car c WHERE c.approvalStatus = :status")
+    Page<Car> findByApprovalStatus(@Param("status") web.car_system.Car_Service.domain.entity.CarStatus status, Pageable pageable);
+
     List<Car> findAllByName(String name);
 
     @Query(value = "SELECT DISTINCT car_id AS value, " +

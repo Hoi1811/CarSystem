@@ -110,6 +110,10 @@ public class Car extends BaseEntity{
     @JsonIgnore
     private List<Image> images;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", length = 20, nullable = false)
+    private CarStatus approvalStatus = CarStatus.DRAFT; // Trạng thái mặc định khi mới tạo
+
     // Thuộc tính mở rộng của xe
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference

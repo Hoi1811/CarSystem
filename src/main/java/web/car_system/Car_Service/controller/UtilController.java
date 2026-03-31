@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import web.car_system.Car_Service.annotation.RestApiV1;
 import web.car_system.Car_Service.constant.Endpoint;
+import web.car_system.Car_Service.domain.dto.comparison.ComparisonRuleDto;
 import web.car_system.Car_Service.domain.dto.control_type.ControlTypeDTO;
 import web.car_system.Car_Service.domain.dto.control_type.ControlTypeRelationDTO;
 import web.car_system.Car_Service.domain.dto.control_type.SimpleComparisonRuleDTO;
@@ -32,7 +33,7 @@ public class UtilController {
         // 1. Lấy tất cả các rule từ Service và đưa vào Map để tra cứu nhanh
         Map<String, SimpleComparisonRuleDTO> allRulesMap = comparisonRuleService.getAllRules().stream()
                 .collect(Collectors.toMap(
-                        r -> r.getCode(),
+                        ComparisonRuleDto::getCode,
                         r -> new SimpleComparisonRuleDTO(r.getId(), r.getCode())
                 ));
 

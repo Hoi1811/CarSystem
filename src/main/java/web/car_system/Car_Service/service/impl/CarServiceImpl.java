@@ -136,6 +136,36 @@ public class CarServiceImpl implements CarService {
 //        }
 //    }
 //    private CarDetailsResponseDTO createCarV3Internal(AddCarRequestDTO carRequest) throws Exception {
+
+    @Override
+    @Transactional
+    public void updateApprovalStatus(Integer carId, web.car_system.Car_Service.domain.entity.CarStatus approvalStatus) {
+        Car car = carRepository.findById(carId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy xe id " + carId));
+        car.setApprovalStatus(approvalStatus);
+        carRepository.save(car);
+    }
+
+    @Override
+    public GlobalResponseDTO<PaginatedMeta, List<CarResponseDTO>> getCarsByApprovalStatus(web.car_system.Car_Service.domain.entity.CarStatus status, int page) {
+        Pageable pageable = PageRequest.of(page, 12, Sort.by("updatedAt").descending());
+        Page<Car> carPage = carRepository.findByApprovalStatus(status, pageable);
+        List<CarResponseDTO> carDTOs = carPage.getContent().stream()
+                .map(carMapper::toCarResponseDTO)
+                .toList();
+
+        Pagination pagination = Pagination.builder()
+                .pageIndex(carPage.getNumber())
+                .pageSize((short) carPage.getSize())
+                .totalItems(carPage.getTotalElements())
+                .totalPages(carPage.getTotalPages())
+                .build();
+
+        return GlobalResponseDTO.<PaginatedMeta, List<CarResponseDTO>>builder()
+                .meta(PaginatedMeta.builder().status(Status.SUCCESS).message("Lấy danh sách xe trạng thái " + status).pagination(pagination).build())
+                .data(carDTOs)
+                .build();
+    }
 //        Car car = CarMapper.INSTANCE.toCar(carRequest);
 //
 //        // Xử lý carTypes nếu có
@@ -299,32 +329,50 @@ public class CarServiceImpl implements CarService {
 //        if (!carAttributes.isEmpty()) {
 //            carAttributeRepository.saveAll(carAttributes);
 //        }
+        boolean isPendingApproval = false;
         List<CarAttribute> carAttributes = new ArrayList<>();
         if (carRequest.specifications() != null) {
             for (var specRequest : carRequest.specifications()) {
-                // 1. Tìm Specification trong DB. Nếu không có, báo lỗi.
-                Specification spec = specificationRepository.findByName(specRequest.name())
-                        .orElseThrow(() -> new EntityNotFoundException(
-                                "Nhóm thông số '" + specRequest.name() + "' không tồn tại. Vui lòng tạo trước."));
+                Specification spec;
+                if (specRequest.id() != null) {
+                    spec = specificationRepository.findById(specRequest.id())
+                            .orElseThrow(() -> new EntityNotFoundException("Nhóm thông số không tồn tại: " + specRequest.id()));
+                } else {
+                    spec = specificationRepository.findByName(specRequest.name())
+                            .orElseGet(() -> {
+                                Specification newSpec = new Specification();
+                                newSpec.setName(specRequest.name());
+                                return specificationRepository.save(newSpec);
+                            });
+                }
 
                 if (specRequest.attributes() != null) {
                     for (var attrRequest : specRequest.attributes()) {
-                        // 2. Tìm Attribute trong DB. Nếu không có, báo lỗi.
-                        Attribute attr = attributeRepository.findByName(attrRequest.name())
-                                .orElseThrow(() -> new EntityNotFoundException(
-                                        "Thuộc tính '" + attrRequest.name() + "' không tồn tại. Vui lòng tạo trước."));
-
-                        // Kiểm tra xem Attribute có thực sự thuộc Specification đã cho không (tùy chọn nhưng nên có)
-                        if (!attr.getSpecification().getSpecificationId().equals(spec.getSpecificationId())) {
-                            throw new IllegalArgumentException("Thuộc tính '" + attr.getName() +
-                                    "' không thuộc nhóm thông số '" + spec.getName() + "'.");
+                        Attribute attr;
+                        if (attrRequest.id() != null) {
+                            attr = attributeRepository.findById(attrRequest.id())
+                                    .orElseThrow(() -> new EntityNotFoundException("Thuộc tính không tồn tại: " + attrRequest.id()));
+                        } else {
+                            attr = attributeRepository.findByName(attrRequest.name())
+                                    .orElseGet(() -> {
+                                        Attribute newAttr = new Attribute();
+                                        newAttr.setName(attrRequest.name());
+                                        newAttr.setSpecification(spec);
+                                        newAttr.setControlType("TEXT_INPUT");
+                                        newAttr.setWeight(0.0f);
+                                        return attributeRepository.save(newAttr);
+                                    });
+                            // Bật cờ kiểm duyệt xe vì có thuộc tính lạ tự thêm mới
+                            isPendingApproval = true;
                         }
 
-                        // 3. Tạo CarAttribute với các ID đã được xác thực
+                        if (!attr.getSpecification().getSpecificationId().equals(spec.getSpecificationId())) {
+                            throw new IllegalArgumentException("Thuộc tính '" + attr.getName() + "' không thuộc nhóm thông số '" + spec.getName() + "'.");
+                        }
+
                         CarAttribute carAttribute = new CarAttribute();
                         carAttribute.setId(new CarAttributeId(car.getCarId(), attr.getAttributeId()));
                         carAttribute.setCar(car);
-
 
                         carAttribute.setAttribute(attr);
                         carAttribute.setValue(attrRequest.value());
@@ -333,6 +381,8 @@ public class CarServiceImpl implements CarService {
                 }
             }
         }
+        
+        car.setApprovalStatus(isPendingApproval ? web.car_system.Car_Service.domain.entity.CarStatus.PENDING_APPROVAL : web.car_system.Car_Service.domain.entity.CarStatus.PUBLISHED);
 
         populateVectorizedFields(car, carRequest.specifications());
 
