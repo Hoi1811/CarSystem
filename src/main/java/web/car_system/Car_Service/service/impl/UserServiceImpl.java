@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import web.car_system.Car_Service.domain.dto.global.*;
 import web.car_system.Car_Service.domain.dto.user.AdminCreateUserRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.ChangePasswordRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.UpdateProfileRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserResponseDTO;
 import web.car_system.Car_Service.domain.entity.Role;
@@ -22,8 +24,13 @@ import web.car_system.Car_Service.repository.UserRepository;
 import web.car_system.Car_Service.service.RedisService;
 import web.car_system.Car_Service.service.UserService;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,6 +44,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RedisService redisService;
+    private final Cloudinary cloudinary;
 
     @Override
     public GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> createUser(UserRequestDTO request) {
@@ -435,6 +443,111 @@ public class UserServiceImpl implements UserService {
             return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
                     .meta(NoPaginatedMeta.builder().status(Status.ERROR).message(e.getMessage()).build())
                     .build();
+        }
+    }
+
+    // ===================== SELF-SERVICE PROFILE OPERATIONS =====================
+
+    @Override
+    @Transactional
+    public GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> updateMyProfile(Long userId, UpdateProfileRequestDTO request) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+
+            // Validate email unique (trừ chính user đó)
+            if (request.email() != null && !request.email().equals(user.getEmail())) {
+                Optional<User> existingByEmail = userRepository.findByEmail(request.email());
+                if (existingByEmail.isPresent() && !existingByEmail.get().getUserId().equals(userId)) {
+                    return GlobalResponseDTO.<NoPaginatedMeta, UserResponseDTO>builder()
+                            .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Email đã được sử dụng bởi tài khoản khác").build())
+                            .build();
+                }
+            }
+
+            userMapper.updateProfileEntity(user, request);
+            User savedUser = userRepository.save(user);
+            UserResponseDTO dto = userMapper.toDTO(savedUser);
+
+            redisService.deleteFromCache("users:" + userId);
+            return GlobalResponseDTO.<NoPaginatedMeta, UserResponseDTO>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Cập nhật thông tin cá nhân thành công").build())
+                    .data(dto).build();
+        } catch (NotFoundException e) {
+            return GlobalResponseDTO.<NoPaginatedMeta, UserResponseDTO>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.ERROR).message(e.getMessage()).build()).build();
+        }
+    }
+
+    @Override
+    @Transactional
+    public GlobalResponseDTO<NoPaginatedMeta, String> updateMyAvatar(Long userId, MultipartFile file) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+
+            // Validate file
+            if (file == null || file.isEmpty()) {
+                return GlobalResponseDTO.<NoPaginatedMeta, String>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("File ảnh không được để trống").build()).build();
+            }
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return GlobalResponseDTO.<NoPaginatedMeta, String>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Chỉ chấp nhận file ảnh").build()).build();
+            }
+            if (file.getSize() > 2 * 1024 * 1024) {
+                return GlobalResponseDTO.<NoPaginatedMeta, String>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Kích thước ảnh tối đa 2MB").build()).build();
+            }
+
+            // Upload to Cloudinary
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
+                    ObjectUtils.asMap("folder", "user_avatars", "public_id", "user_" + userId));
+            String imageUrl = (String) uploadResult.get("secure_url");
+
+            user.setPicture(imageUrl);
+            userRepository.save(user);
+            redisService.deleteFromCache("users:" + userId);
+
+            return GlobalResponseDTO.<NoPaginatedMeta, String>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Cập nhật ảnh đại diện thành công").build())
+                    .data(imageUrl).build();
+        } catch (Exception e) {
+            return GlobalResponseDTO.<NoPaginatedMeta, String>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Cập nhật ảnh thất bại: " + e.getMessage()).build()).build();
+        }
+    }
+
+    @Override
+    @Transactional
+    public GlobalResponseDTO<NoPaginatedMeta, Void> changeMyPassword(Long userId, ChangePasswordRequestDTO request) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+
+            // Chỉ user local mới có thể đổi mật khẩu
+            if (!"local".equalsIgnoreCase(user.getProvider()) && user.getProvider() != null) {
+                return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.ERROR)
+                                .message("Tài khoản đăng nhập qua " + user.getProvider() + " không thể đổi mật khẩu").build()).build();
+            }
+
+            // Verify mật khẩu hiện tại
+            if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+                return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                        .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Mật khẩu hiện tại không đúng").build()).build();
+            }
+
+            user.setPassword(passwordEncoder.encode(request.newPassword()));
+            userRepository.save(user);
+            redisService.deleteFromCache("users:" + userId);
+
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Đổi mật khẩu thành công").build()).build();
+        } catch (NotFoundException e) {
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder().status(Status.ERROR).message(e.getMessage()).build()).build();
         }
     }
 }

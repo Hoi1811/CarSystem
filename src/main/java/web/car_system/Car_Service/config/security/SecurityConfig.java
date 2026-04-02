@@ -48,7 +48,8 @@ public class SecurityConfig {
                                 Endpoint.V1.AUTH.REFRESH_TOKEN,
                                 Endpoint.V1.AUTH.LOGOUT,
                                 Endpoint.V1.AUTH.FORGOT_PASSWORD,
-                                Endpoint.V1.AUTH.RESET_PASSWORD
+                                Endpoint.V1.AUTH.RESET_PASSWORD,
+                                Endpoint.V1.AUTH.GOOGLE_ONE_TAP
                         ).permitAll()
                         .requestMatchers("actualtor/**").permitAll()
                         .requestMatchers(Endpoint.V1.OPTIONS.OPTIONS_BY_SOURCE_NAME).permitAll()
@@ -92,6 +93,8 @@ public class SecurityConfig {
 
                         //==> Các endpoint yêu cầu vai trò USER hoặc ADMIN
                         .requestMatchers(Endpoint.V1.USER.ME).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.USER.ME_AVATAR).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(Endpoint.V1.USER.ME_PASSWORD).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(POST, Endpoint.V1.CAR.CAR_ID_IMAGES).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_MODELS_BY_NAME).permitAll()
                         .requestMatchers(POST, Endpoint.V1.CAR.FIND_RELATED_CAR_NAMES_BY_NAME).permitAll()

@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import web.car_system.Car_Service.constant.Endpoint;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
@@ -15,6 +16,8 @@ import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
 import web.car_system.Car_Service.domain.dto.user.AdminCreateUserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.AdminResetPasswordRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.ChangePasswordRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.UpdateProfileRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UpdateUserStatusRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserAuthoritiesDTO;
 import web.car_system.Car_Service.domain.dto.user.UserRequestDTO;
@@ -213,6 +216,35 @@ public class UserController {
         if (response.meta().status() == Status.SUCCESS) {
             return ResponseEntity.ok(response);
         }
+        return ResponseEntity.status(400).body(response);
+    }
+
+    // ===================== SELF-SERVICE PROFILE OPERATIONS =====================
+
+    @PutMapping(Endpoint.V1.USER.ME)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO>> updateMyProfile(
+            Authentication authentication, @Valid @RequestBody UpdateProfileRequestDTO request) {
+        Long userId = Long.parseLong(authentication.getName());
+        GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> response = userService.updateMyProfile(userId, request);
+        if (response.meta().status() == Status.SUCCESS) return ResponseEntity.ok(response);
+        return ResponseEntity.status(400).body(response);
+    }
+
+    @PostMapping(Endpoint.V1.USER.ME_AVATAR)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, String>> updateMyAvatar(
+            Authentication authentication, @RequestParam("file") MultipartFile file) {
+        Long userId = Long.parseLong(authentication.getName());
+        GlobalResponseDTO<NoPaginatedMeta, String> response = userService.updateMyAvatar(userId, file);
+        if (response.meta().status() == Status.SUCCESS) return ResponseEntity.ok(response);
+        return ResponseEntity.status(400).body(response);
+    }
+
+    @PatchMapping(Endpoint.V1.USER.ME_PASSWORD)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> changeMyPassword(
+            Authentication authentication, @Valid @RequestBody ChangePasswordRequestDTO request) {
+        Long userId = Long.parseLong(authentication.getName());
+        GlobalResponseDTO<NoPaginatedMeta, Void> response = userService.changeMyPassword(userId, request);
+        if (response.meta().status() == Status.SUCCESS) return ResponseEntity.ok(response);
         return ResponseEntity.status(400).body(response);
     }
 }

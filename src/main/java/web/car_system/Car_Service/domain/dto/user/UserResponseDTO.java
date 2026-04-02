@@ -12,6 +12,8 @@ public record UserResponseDTO(
         String username,
         String email,
         String fullName,
+        String picture,
+        String phone,
         String provider,
         boolean isEnabled,
         LocalDateTime createdAt,

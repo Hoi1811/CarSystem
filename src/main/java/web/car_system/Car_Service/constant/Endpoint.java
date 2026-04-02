@@ -14,6 +14,7 @@ public class Endpoint {
             public static final String VALIDATE_ADMIN = PREFIX + "/validate-admin";
             public static final String FORGOT_PASSWORD = PREFIX + "/forgot-password";
             public static final String RESET_PASSWORD = PREFIX + "/reset-password";
+            public static final String GOOGLE_ONE_TAP = PREFIX + "/google/one-tap";
         }
 
         public static final class CAR{
@@ -87,6 +88,8 @@ public class Endpoint {
         public static final class USER{
             public static final String USER = PREFIX + "/users";
             public static final String ME = USER + "/me";
+            public static final String ME_AVATAR = ME + "/avatar";
+            public static final String ME_PASSWORD = ME + "/password";
             public static final String USER_ID = USER + "/{userId}";
             public static final String USER_AUTHORITIES = USER + "/{userId}/authorities";
             public static final String USER_ROLES = USER + "/{userId}/roles";

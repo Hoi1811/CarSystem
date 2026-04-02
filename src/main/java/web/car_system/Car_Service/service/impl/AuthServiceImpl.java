@@ -416,4 +416,62 @@ public class AuthServiceImpl implements AuthService {
         // Xóa cache authorities để buộc re-authenticate
         redisTemplate.delete("user_authorities:" + userIdStr);
     }
+
+    @Override
+    @Transactional
+    public GlobalResponseDTO<NoPaginatedMeta, Void> handleGoogleOneTap(String credential, HttpServletResponse response) {
+        try {
+            // Verify the Google ID token via Google's tokeninfo endpoint
+            Map<?, ?> tokenInfo = webClient.get()
+                    .uri("https://oauth2.googleapis.com/tokeninfo?id_token=" + credential)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (tokenInfo == null) {
+                throw new RuntimeException("Failed to verify Google ID token");
+            }
+
+            // Validate audience matches our client ID
+            String aud = (String) tokenInfo.get("aud");
+            if (!googleClientId.equals(aud)) {
+                throw new SecurityException("Token audience mismatch");
+            }
+
+            String sub = (String) tokenInfo.get("sub");
+            String email = (String) tokenInfo.get("email");
+            String name = (String) tokenInfo.get("name");
+            String picture = (String) tokenInfo.get("picture");
+
+            // Create or find the OAuth2 user
+            User user = createOAuth2User(sub, name, "google", email, picture);
+
+            // Generate JWT tokens and set as cookies
+            Map<String, String> tokens = jwtTokenUtil.generateTokenPair(user);
+            addTokensToCookies(tokens, true, response);
+
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder()
+                            .status(Status.SUCCESS)
+                            .message("Google login successful")
+                            .build())
+                    .build();
+        } catch (SecurityException e) {
+            log.severe("Google One Tap security error: " + e.getMessage());
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder()
+                            .status(Status.ERROR)
+                            .message("Token không hợp lệ.")
+                            .build())
+                    .build();
+        } catch (Exception e) {
+            log.severe("Google One Tap error: " + e.getMessage());
+            return GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                    .meta(NoPaginatedMeta.builder()
+                            .status(Status.ERROR)
+                            .message("Đăng nhập Google thất bại. Vui lòng thử lại.")
+                            .build())
+                    .build();
+        }
+    }
 }

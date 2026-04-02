@@ -19,4 +19,5 @@ public interface AuthService {
     void logout(HttpServletResponse response, HttpServletRequest request);
     void forgotPassword(String email);
     void resetPassword(String token, String newPassword, String confirmPassword);
+    GlobalResponseDTO<NoPaginatedMeta, Void> handleGoogleOneTap(String credential, HttpServletResponse response);
 }

@@ -39,6 +39,9 @@ public class User extends BaseEntity implements UserDetails { // <-- Bước 1: 
     private String picture;
 
     @Column
+    private String phone;
+
+    @Column
     private String provider; // "google", "github", etc.
 
     @Column(name = "external_id")

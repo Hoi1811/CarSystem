@@ -6,6 +6,8 @@ import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.PaginatedMeta;
 import web.car_system.Car_Service.domain.dto.user.AdminCreateUserRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.ChangePasswordRequestDTO;
+import web.car_system.Car_Service.domain.dto.user.UpdateProfileRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserResponseDTO;
 import web.car_system.Car_Service.domain.entity.Role;
@@ -38,4 +40,9 @@ public interface UserService {
     GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> adminCreateUser(AdminCreateUserRequestDTO request);
     GlobalResponseDTO<NoPaginatedMeta, Void> adminResetPassword(Long userId, String newPassword);
     GlobalResponseDTO<NoPaginatedMeta, Void> toggleUserStatus(Long userId, boolean isEnabled);
+
+    // === Self-service profile operations ===
+    GlobalResponseDTO<NoPaginatedMeta, UserResponseDTO> updateMyProfile(Long userId, UpdateProfileRequestDTO request);
+    GlobalResponseDTO<NoPaginatedMeta, String> updateMyAvatar(Long userId, org.springframework.web.multipart.MultipartFile file);
+    GlobalResponseDTO<NoPaginatedMeta, Void> changeMyPassword(Long userId, ChangePasswordRequestDTO request);
 }

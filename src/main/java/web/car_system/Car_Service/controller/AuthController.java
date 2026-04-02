@@ -290,4 +290,25 @@ public class AuthController {
     private String getClientIP(HttpServletRequest request) {
         return request.getRemoteAddr();
     }
+
+    @PostMapping(Endpoint.V1.AUTH.GOOGLE_ONE_TAP)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> googleOneTap(
+            @RequestBody Map<String, String> body,
+            HttpServletResponse response) {
+        String credential = body.get("credential");
+        if (credential == null || credential.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                    GlobalResponseDTO.<NoPaginatedMeta, Void>builder()
+                            .meta(NoPaginatedMeta.builder()
+                                    .status(Status.ERROR)
+                                    .message("Missing credential")
+                                    .build())
+                            .build());
+        }
+        GlobalResponseDTO<NoPaginatedMeta, Void> result = authService.handleGoogleOneTap(credential, response);
+        if (result.meta().status() == Status.SUCCESS) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.status(401).body(result);
+    }
 }

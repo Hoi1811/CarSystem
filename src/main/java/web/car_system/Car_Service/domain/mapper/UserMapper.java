@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.domain.mapper;
 
 import org.mapstruct.*;
+import web.car_system.Car_Service.domain.dto.user.UpdateProfileRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserCreateRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserRequestDTO;
 import web.car_system.Car_Service.domain.dto.user.UserResponseDTO;
@@ -28,4 +29,13 @@ public interface UserMapper {
     // Cập nhật Entity từ RequestDTO (không thay đổi ID và roles)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntity(@MappingTarget User entity, UserRequestDTO dto);
+
+    // Cập nhật Entity từ UpdateProfileRequestDTO (self-update profile)
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "provider", ignore = true)
+    @Mapping(target = "username", ignore = true)
+    void updateProfileEntity(@MappingTarget User entity, UpdateProfileRequestDTO dto);
 }
