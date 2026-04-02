@@ -1,9 +1,6 @@
 package web.car_system.Car_Service.domain.mapper;
 
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.Named;
+import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 import web.car_system.Car_Service.domain.dto.attribute.CarAttributeDTO;
 import web.car_system.Car_Service.domain.dto.car.*;
@@ -31,6 +28,16 @@ public interface CarMapper {
     @Mapping(target = "carSegment", ignore = true)
     @Mapping(target = "manufacturer", ignore = true)
     @Mapping(target = "origin", ignore = true) // Không dùng trong JSON
+    @Mapping(target = "engineType", ignore = true)
+    @Mapping(target = "driveTrain", ignore = true)
+    @Mapping(target = "transmissionType", ignore = true)
+    @Mapping(target = "seats", ignore = true)
+    @Mapping(target = "horsepower", ignore = true)
+    @Mapping(target = "fuelConsumption", ignore = true)
+    @Mapping(target = "hasSunroof", ignore = true)
+    @Mapping(target = "airbagCount", ignore = true)
+    @Mapping(target = "images", ignore = true)
+    @Mapping(target = "approvalStatus", ignore = true)
     Car toCar(AddCarRequestDTO addCarRequestDTO);
 
     @Mapping(target = "carId", ignore = true) // ID sinh tự động
@@ -40,6 +47,16 @@ public interface CarMapper {
     @Mapping(target = "carSegment", ignore = true)
     @Mapping(target = "manufacturer", ignore = true)
     @Mapping(target = "origin", ignore = true) // Không dùng trong JSON
+    @Mapping(target = "engineType", ignore = true)
+    @Mapping(target = "driveTrain", ignore = true)
+    @Mapping(target = "transmissionType", ignore = true)
+    @Mapping(target = "seats", ignore = true)
+    @Mapping(target = "horsepower", ignore = true)
+    @Mapping(target = "fuelConsumption", ignore = true)
+    @Mapping(target = "hasSunroof", ignore = true)
+    @Mapping(target = "airbagCount", ignore = true)
+    @Mapping(target = "images", ignore = true)
+    @Mapping(target = "approvalStatus", ignore = true)
     Car toCar(UpdateCarRequestDTO updateCarRequestDTO);
 
     @Mapping(target = "carId", ignore = true) // Luôn bỏ qua ID
@@ -49,14 +66,29 @@ public interface CarMapper {
     @Mapping(target = "carTypes", ignore = true) // Sẽ được xử lý riêng
     @Mapping(target = "manufacturer", ignore = true) // Xử lý bằng ID
     @Mapping(target = "carSegment", ignore = true) // Xử lý bằng ID
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "engineType", ignore = true)
+    @Mapping(target = "driveTrain", ignore = true)
+    @Mapping(target = "transmissionType", ignore = true)
+    @Mapping(target = "seats", ignore = true)
+    @Mapping(target = "horsepower", ignore = true)
+    @Mapping(target = "fuelConsumption", ignore = true)
+    @Mapping(target = "hasSunroof", ignore = true)
+    @Mapping(target = "airbagCount", ignore = true)
+    @Mapping(target = "approvalStatus", ignore = true)
     void updateCarFromDto(UpdateCarRequestDTO dto, @MappingTarget Car car);
 
     // 2. Chuyển từ Car entity sang CarResponse
+    @BeanMapping(unmappedTargetPolicy = ReportingPolicy.IGNORE)
     @Mapping(source = "carAttributes", target = "specifications", qualifiedByName = "mapCarAttributesToSpecifications")
     @Mapping(source = "carTypes", target = "carTypeIds", qualifiedByName = "mapCarTypesToIds") // Chuyển carTypes thành danh sách ID
     CarDetailsResponseDTO toCarDetailsResponse(Car car);
 
 //    @Mapping(target = "carAttributes", ignore = true) // Không dùng trong JSON
+    @BeanMapping(unmappedTargetPolicy = ReportingPolicy.IGNORE)
     @Mapping(source = "carTypes", target = "carTypeIds", qualifiedByName = "mapCarTypesToIds") // Chuyển carTypes thành danh sách ID
     CarResponseDTO toCarResponseDTO(Car car);
 

@@ -47,6 +47,7 @@ public class ShowroomReview extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
+    @Builder.Default
     private ReviewStatus reviewStatus = ReviewStatus.APPROVED;
 
     public enum ReviewStatus {

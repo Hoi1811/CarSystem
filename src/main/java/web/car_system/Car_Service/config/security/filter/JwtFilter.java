@@ -66,8 +66,12 @@ public class JwtFilter extends OncePerRequestFilter {
             // Nếu JWT không chứa roles/permissions (trường hợp dùng stateful hoặc token cũ), fallback sang Redis
             if (roles == null || permissions == null) {
                 String redisKey = "user:auth:" + userId;
-                roles = (List<String>) redisTemplate.opsForHash().get(redisKey, "roles");
-                permissions = (List<String>) redisTemplate.opsForHash().get(redisKey, "permissions");
+                @SuppressWarnings("unchecked")
+                List<String> redisRoles = (List<String>) redisTemplate.opsForHash().get(redisKey, "roles");
+                @SuppressWarnings("unchecked")
+                List<String> redisPermissions = (List<String>) redisTemplate.opsForHash().get(redisKey, "permissions");
+                roles = redisRoles;
+                permissions = redisPermissions;
 
                 if (roles == null || permissions == null) {
                     // Không tìm thấy quyền hạn -> coi như không hợp lệ

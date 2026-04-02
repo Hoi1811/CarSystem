@@ -2,6 +2,7 @@ package web.car_system.Car_Service.domain.dto.recommendation;
 
 import lombok.Builder;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @Data
@@ -15,5 +16,6 @@ public class RecommendationRuleDto {
     private JsonNode conditionsJson;
     private JsonNode suggestionJson;
 
+    @JsonProperty("isActive")
     private boolean isActive;
 }

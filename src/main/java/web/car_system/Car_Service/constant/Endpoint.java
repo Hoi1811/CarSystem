@@ -103,6 +103,10 @@ public class Endpoint {
             public static final String PREFIX = V1.PREFIX + "/chatbot";
             public static final String CHAT = PREFIX + "/query";
         }
+        public static final class AI {
+            public static final String PREFIX = V1.PREFIX + "/ai";
+            public static final String SUGGEST = PREFIX + "/suggest";
+        }
         public static final class ROLE {
             public static final String ROLE = PREFIX + "/roles";
             public static final String ROLE_ID = ROLE + "/{roleId}";

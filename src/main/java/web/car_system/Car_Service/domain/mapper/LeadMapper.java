@@ -29,7 +29,10 @@ public interface LeadMapper {
             @Mapping(target = "interestedCar", ignore = true), // Sẽ gán thủ công
             @Mapping(target = "assignee", ignore = true),     // Sẽ gán thủ công
             @Mapping(target = "createdAt", ignore = true),
-            @Mapping(target = "updatedAt", ignore = true)
+            @Mapping(target = "updatedAt", ignore = true),
+            @Mapping(target = "deletedAt", ignore = true),
+            @Mapping(target = "status", ignore = true),
+            @Mapping(target = "showroom", ignore = true)
     })
     Lead toEntity(CreateLeadRequest request);
 }

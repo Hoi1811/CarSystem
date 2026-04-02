@@ -15,6 +15,10 @@ public interface RoleMapper {
     // --------------------- RequestDTO → Entity ---------------------
     @Mapping(target = "roleId", ignore = true) // Bỏ qua ID khi tạo mới
     @Mapping(target = "permissions", ignore = true) // Xử lý riêng trong Service
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "status", ignore = true)
     Role toEntity(RoleRequestDTO dto);
 
     // --------------------- Entity → ResponseDTO ---------------------
@@ -23,6 +27,12 @@ public interface RoleMapper {
 
     // --------------------- Cập nhật Entity từ DTO ---------------------
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "roleId", ignore = true)
+    @Mapping(target = "permissions", ignore = true)
     void updateEntity(RoleRequestDTO dto, @MappingTarget Role entity);
 
     // --------------------- Custom Mapping Logic (nếu cần) ---------------------

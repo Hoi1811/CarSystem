@@ -35,7 +35,10 @@ public interface TestDriveAppointmentMapper {
             @Mapping(target = "car", ignore = true),
             @Mapping(target = "assignee", ignore = true),
             @Mapping(target = "createdAt", ignore = true),
-            @Mapping(target = "updatedAt", ignore = true)
+            @Mapping(target = "updatedAt", ignore = true),
+            @Mapping(target = "deletedAt", ignore = true),
+            @Mapping(target = "status", ignore = true),
+            @Mapping(target = "showroom", ignore = true)
     })
     TestDriveAppointment toEntity(CreateTestDriveAppointmentRequest request);
 
@@ -49,5 +52,10 @@ public interface TestDriveAppointmentMapper {
     @Mapping(target = "id", ignore = true) // Không bao giờ cập nhật ID
     @Mapping(target = "assignee", ignore = true) // Bỏ qua, vì ta sẽ xử lý thủ công (Long -> User)
     @Mapping(target = "car", ignore = true) // Bỏ qua, vì ta sẽ xử lý thủ công (Long -> InventoryCar)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "showroom", ignore = true)
     void updateFromDto(UpdateTestDriveAppointmentRequest request, @MappingTarget TestDriveAppointment appointment);
 }

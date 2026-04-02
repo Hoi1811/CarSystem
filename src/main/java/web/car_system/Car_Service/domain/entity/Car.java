@@ -112,6 +112,7 @@ public class Car extends BaseEntity{
 
     @Enumerated(EnumType.STRING)
     @Column(name = "approval_status", length = 20, nullable = false)
+    @Builder.Default
     private CarStatus approvalStatus = CarStatus.DRAFT; // Trạng thái mặc định khi mới tạo
 
     // Thuộc tính mở rộng của xe

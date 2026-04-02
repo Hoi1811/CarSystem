@@ -3,7 +3,9 @@ package web.car_system.Car_Service.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -12,18 +14,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import web.car_system.Car_Service.domain.dto.car.CarResponseDTO;
-import web.car_system.Car_Service.domain.dto.inventory_car.InventoryCarDto;
 import web.car_system.Car_Service.domain.dto.recommendation.CreateOrUpdateRuleRequest;
 import web.car_system.Car_Service.domain.dto.recommendation.RecommendationRequest;
 import web.car_system.Car_Service.domain.dto.recommendation.RecommendationRuleDto;
 import web.car_system.Car_Service.domain.entity.Car;
-import web.car_system.Car_Service.domain.entity.InventoryCar;
 import web.car_system.Car_Service.domain.entity.RecommendationRule;
 import web.car_system.Car_Service.domain.mapper.CarMapper;
-import web.car_system.Car_Service.domain.mapper.InventoryCarMapper;
 import web.car_system.Car_Service.domain.mapper.RecommendationRuleMapper;
 import web.car_system.Car_Service.repository.CarRepository;
-import web.car_system.Car_Service.repository.InventoryCarRepository;
 import web.car_system.Car_Service.repository.RecommendationRuleRepository;
 import web.car_system.Car_Service.service.RecommendationService;
 
@@ -36,174 +34,142 @@ import java.util.stream.Collectors;
 public class RecommendationServiceImpl implements RecommendationService {
 
     private final RecommendationRuleRepository ruleRepository;
-    private final InventoryCarRepository inventoryCarRepository;
-    private final InventoryCarMapper inventoryCarMapper;
-    private final CarRepository carRepository; // <-- THAY ĐỔI: Dùng CarRepository
-    private final CarMapper carMapper;       // <-- THAY ĐỔI: Dùng CarMapper
-    private final ObjectMapper objectMapper; // Spring Boot tự động cung cấp Bean này
+    private final CarRepository carRepository;
+    private final CarMapper carMapper;
+    private final ObjectMapper objectMapper;
     private final RecommendationRuleMapper ruleMapper;
-    // === LOGIC GỢI Ý CHO KHÁCH HÀNG ===
+
+    // Ngân sách FE gửi đơn vị triệu VNĐ, DB lưu đơn vị VNĐ → nhân 1.000.000
+    private static final BigDecimal BUDGET_MULTIPLIER = new BigDecimal("1000000");
+
+    // === LOGIC GỢI Ý CHO KHÁCH HÀNG (Hybrid: Direct mapping + Usage rule) ===
 
     @Override
     @Transactional(readOnly = true)
     public Page<CarResponseDTO> findSuggestions(RecommendationRequest request, Pageable pageable) {
-        List<RecommendationRule> activeRules = ruleRepository.findAllByIsActiveTrue();
+        Map<String, Object> criteria = request.getCriteria();
 
-        for (RecommendationRule rule : activeRules) {
-            try {
-                JsonNode conditionsNode = objectMapper.readTree(rule.getConditionsJson());
-                if (matches(request.getCriteria(), conditionsNode)) {
-                    JsonNode suggestionNode = objectMapper.readTree(rule.getSuggestionJson());
-                    // GỌI PHƯƠNG THỨC HELPER MỚI VỚI PAGINATION
-                    return findCarTemplatesBySuggestionPaginated(suggestionNode, pageable);
-                }
-            } catch (Exception e) {
-                // Ghi log
-                System.err.println("Lỗi parse JSON cho rule ID " + rule.getId() + ": " + e.getMessage());
-            }
-        }
+        // Xây dựng Specification từ tiêu chí khách hàng
+        Specification<Car> spec = buildSpecFromCriteria(criteria);
 
-        // Trả về Page rỗng nếu không match rule nào
-        return Page.empty(pageable);
-    }
-    
-    /**
-     * Helper method với pagination support
-     */
-    private Page<CarResponseDTO> findCarTemplatesBySuggestionPaginated(JsonNode suggestionNode, Pageable pageable) {
-        // Build Specification như cũ
-        Specification<Car> spec = buildCarSpecification(suggestionNode);
-        
-        // Tìm tất cả cars matching (chưa phân trang)
+        // Tìm tất cả xe matching
         List<Car> allMatchingCars = carRepository.findAll(spec);
-        
-        // Deduplicate cars by name và map to DTO
+
+        // Loại trùng theo tên xe, ưu tiên xe có thumbnail
         List<CarResponseDTO> uniqueCars = allMatchingCars.stream()
                 .map(carMapper::toCarResponseDTO)
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
-                                dto -> dto.name(), // Key: Tên xe
-                                dto -> dto,        // Value: DTO
+                                dto -> dto.name(),
+                                dto -> dto,
                                 (existing, replacement) -> {
-                                    // Ưu tiên xe có thumbnail
                                     if (existing.thumbnail() == null && replacement.thumbnail() != null) {
                                         return replacement;
                                     }
                                     return existing;
                                 },
-                                LinkedHashMap::new // Giữ thứ tự
+                                LinkedHashMap::new
                         ),
                         map -> new ArrayList<>(map.values())
                 ));
-        
-        // Manual pagination
+
+        // Phân trang thủ công (do dedup trên Java)
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), uniqueCars.size());
-        
-        List<CarResponseDTO> pageContent = start >= uniqueCars.size() ? 
-            Collections.emptyList() : 
-            uniqueCars.subList(start, end);
-        
+
+        List<CarResponseDTO> pageContent = start >= uniqueCars.size()
+                ? Collections.emptyList()
+                : uniqueCars.subList(start, end);
+
         return new PageImpl<>(pageContent, pageable, uniqueCars.size());
     }
-    
+
     /**
-     * Extract Specification building logic
+     * Xây dựng Specification trực tiếp từ tiêu chí khách hàng.
+     * - budget     → price BETWEEN (×1.000.000)
+     * - numberOfPassengers → seats >=
+     * - usage      → tra admin rule → lọc theo segments + driveTrain
      */
-    private Specification<Car> buildCarSpecification(JsonNode suggestionNode) {
-        return (root, query, criteriaBuilder) -> {
+    private Specification<Car> buildSpecFromCriteria(Map<String, Object> criteria) {
+        return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 1. Lọc theo Hãng xe (Manufacturer ID)
-            if (suggestionNode.has("manufacturer_id")) {
-                int manufId = suggestionNode.get("manufacturer_id").asInt();
-                predicates.add(criteriaBuilder.equal(root.get("manufacturer").get("id"), manufId));
+            // 1. Ngân sách → khoảng giá
+            if (criteria.containsKey("budget")) {
+                parseBudgetToPrice(criteria.get("budget").toString(), root, cb, predicates);
             }
 
-            // 2. Lọc theo Loại động cơ (Engine Type)
-            if (suggestionNode.has("engine_type")) {
-                String engineType = suggestionNode.get("engine_type").asText();
-                predicates.add(criteriaBuilder.equal(root.get("engineType"), engineType));
+            // 2. Số hành khách → số chỗ ngồi tối thiểu
+            if (criteria.containsKey("numberOfPassengers")) {
+                try {
+                    int seats = Integer.parseInt(criteria.get("numberOfPassengers").toString());
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("seats"), seats));
+                } catch (NumberFormatException ignored) {
+                }
             }
 
-            // 3. Lọc theo Giá (Price)
-            if (suggestionNode.has("max_price")) {
-                BigDecimal maxPrice = new BigDecimal(suggestionNode.get("max_price").asText());
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
+            // 3. Nhu cầu sử dụng → tra rule admin để lấy phân khúc + bộ lọc phụ
+            if (criteria.containsKey("usage")) {
+                applyUsageRule(criteria.get("usage").toString(), root, cb, predicates);
             }
 
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 
-    // Helper method để kiểm tra sự trùng khớp
-    private boolean matches(Map<String, Object> userCriteria, JsonNode ruleConditions) {
-        Iterator<Map.Entry<String, JsonNode>> fields = ruleConditions.fields();
-        while (fields.hasNext()) {
-            Map.Entry<String, JsonNode> field = fields.next();
-            String key = field.getKey();
-            String ruleValue = field.getValue().asText();
-
-            // Nếu tiêu chí của người dùng không chứa key của rule, hoặc giá trị không khớp -> false
-            if (!userCriteria.containsKey(key) || !userCriteria.get(key).toString().equals(ruleValue)) {
-                return false;
+    /**
+     * Parse chuỗi budget (VD: "500-700") sang predicate price BETWEEN.
+     * Budget đơn vị triệu VNĐ, DB lưu VNĐ → nhân BUDGET_MULTIPLIER.
+     */
+    private void parseBudgetToPrice(String budget, Root<Car> root, CriteriaBuilder cb,
+                                    List<Predicate> predicates) {
+        String[] parts = budget.split("-");
+        if (parts.length == 2) {
+            try {
+                BigDecimal minPrice = new BigDecimal(parts[0].trim()).multiply(BUDGET_MULTIPLIER);
+                BigDecimal maxPrice = new BigDecimal(parts[1].trim()).multiply(BUDGET_MULTIPLIER);
+                predicates.add(cb.between(root.get("price"), minPrice, maxPrice));
+            } catch (NumberFormatException ignored) {
             }
         }
-        // Nếu tất cả các key/value trong rule đều khớp -> true
-        return true;
     }
 
-    // Helper method để tìm xe dựa trên gợi ý
-    private List<InventoryCarDto> findCarsBySuggestion(JsonNode suggestionNode) {
-        Specification<InventoryCar> spec = (root, query, criteriaBuilder) -> {
-            List<Predicate> predicates = new ArrayList<>();
+    /**
+     * Tra bảng rule để tìm rule ứng với usage → lấy segments + driveTrain từ suggestionJson.
+     */
+    private void applyUsageRule(String usage, Root<Car> root, CriteriaBuilder cb,
+                                List<Predicate> predicates) {
+        List<RecommendationRule> activeRules = ruleRepository.findAllByIsActiveTrue();
 
-            // 1. Lọc theo Phân khúc xe (Nằm trong bảng Car)
-            if (suggestionNode.has("segment")) {
-                String segment = suggestionNode.get("segment").asText();
-                // Giả định: InventoryCar -> Car -> CarSegment -> name
-                predicates.add(criteriaBuilder.equal(root.get("car").get("carSegment").get("name"), segment));
+        for (RecommendationRule rule : activeRules) {
+            try {
+                JsonNode conditions = objectMapper.readTree(rule.getConditionsJson());
+                if (conditions.has("usage") && conditions.get("usage").asText().equals(usage)) {
+                    JsonNode suggestion = objectMapper.readTree(rule.getSuggestionJson());
+
+                    // Lọc theo phân khúc
+                    if (suggestion.has("segments") && suggestion.get("segments").isArray()) {
+                        List<String> segments = new ArrayList<>();
+                        suggestion.get("segments").forEach(node -> segments.add(node.asText()));
+                        if (!segments.isEmpty()) {
+                            predicates.add(root.get("carSegment").get("name").in(segments));
+                        }
+                    }
+
+                    // Lọc theo hệ dẫn động (tuỳ chọn)
+                    if (suggestion.has("driveTrain") && !suggestion.get("driveTrain").asText().isBlank()) {
+                        predicates.add(cb.equal(root.get("driveTrain"), suggestion.get("driveTrain").asText()));
+                    }
+
+                    break; // Đã tìm thấy rule phù hợp
+                }
+            } catch (Exception e) {
+                System.err.println("Lỗi parse JSON cho rule ID " + rule.getId() + ": " + e.getMessage());
             }
-
-            // 2. Lọc theo Số chỗ ngồi tối thiểu (Nằm trong bảng Car)
-            if (suggestionNode.has("minSeats")) {
-                int minSeats = suggestionNode.get("minSeats").asInt();
-                // Giả định: InventoryCar -> Car -> seats
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("car").get("seats"), minSeats));
-            }
-
-            // 3. Lọc theo Giá tiền tối đa (InventoryCar.price)
-            if (suggestionNode.has("maxPrice")) {
-                BigDecimal maxPrice = new BigDecimal(suggestionNode.get("maxPrice").asText());
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
-            }
-
-            // 4. Lọc theo Tình trạng xe: Mới/Cũ (InventoryCar.conditionType)
-            if (suggestionNode.has("condition")) {
-                String condition = suggestionNode.get("condition").asText();
-                // So sánh chuỗi với Enum (convert Enum sang String trong câu query)
-                predicates.add(criteriaBuilder.equal(root.get("conditionType").as(String.class), condition));
-            }
-
-            // 5. Lọc theo Năm sản xuất tối thiểu (InventoryCar.yearOfManufacture)
-            if (suggestionNode.has("minYear")) {
-                int minYear = suggestionNode.get("minYear").asInt();
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("yearOfManufacture"), minYear));
-            }
-
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        };
-
-        // Thực hiện truy vấn
-        List<InventoryCar> foundCars = inventoryCarRepository.findAll(spec);
-
-        // Mapping sang DTO
-        return foundCars.stream()
-                .map(inventoryCarMapper::toDto)
-                .collect(Collectors.toList());
+        }
     }
 
-    // === CÁC PHƯƠM THỨC CRUD CHO ADMIN ===
+    // === CÁC PHƯƠNG THỨC CRUD CHO ADMIN ===
 
     @Override
     @Transactional(readOnly = true)
@@ -224,7 +190,6 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Override
     @Transactional
     public RecommendationRuleDto createRule(CreateOrUpdateRuleRequest request) {
-        // Kiểm tra tên rule đã tồn tại chưa
         if (ruleRepository.existsByRuleName(request.getRuleName())) {
             throw new IllegalArgumentException("Tên quy tắc '" + request.getRuleName() + "' đã tồn tại.");
         }
@@ -237,21 +202,18 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Override
     @Transactional
     public RecommendationRuleDto updateRule(Long id, CreateOrUpdateRuleRequest request) {
-        // Tìm quy tắc hiện có
         RecommendationRule existingRule = ruleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không thể cập nhật. Không tìm thấy quy tắc với ID: " + id));
 
-        // Kiểm tra nếu đổi tên, đảm bảo tên mới không bị trùng với rule khác
         if (!existingRule.getRuleName().equals(request.getRuleName())) {
-            if(ruleRepository.existsByRuleName(request.getRuleName())) {
+            if (ruleRepository.existsByRuleName(request.getRuleName())) {
                 throw new IllegalArgumentException("Tên quy tắc '" + request.getRuleName() + "' đã tồn tại.");
             }
         }
 
-        // Cập nhật các trường
         existingRule.setRuleName(request.getRuleName());
         existingRule.setDescription(request.getDescription());
-        existingRule.setConditionsJson(ruleMapper.toString(request.getConditionsJson())); // Dùng helper từ mapper
+        existingRule.setConditionsJson(ruleMapper.toString(request.getConditionsJson()));
         existingRule.setSuggestionJson(ruleMapper.toString(request.getSuggestionJson()));
         existingRule.setActive(request.isActive());
 
@@ -267,7 +229,4 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
         ruleRepository.deleteById(id);
     }
-
-    // (Tôi cũng đã sửa lại tên biến recommendationRuleMapper -> ruleMapper cho ngắn gọn
-    // và thêm RecommendationRuleRepository để kiểm tra tên trùng lặp)
 }

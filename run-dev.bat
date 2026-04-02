@@ -7,6 +7,6 @@ set SETTINGS=%USERPROFILE%\.m2\settings_default.xml
 echo Using JAVA_HOME: %JAVA_HOME%
 echo Using settings: %SETTINGS%
 
-call mvnw -s %SETTINGS% spring-boot:run
+call mvnw -s %SETTINGS% clean compile spring-boot:run
 
 pause

@@ -210,11 +210,11 @@ public class JwtTokenUtil {
         String jti = UUID.randomUUID().toString();
         claims.put("jti", jti);
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + ttlInSeconds * 1000))
-                .signWith(privateKey, SignatureAlgorithm.RS256)
+                .claims(claims)
+                .subject(subject)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + ttlInSeconds * 1000))
+                .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
     }
 
@@ -270,7 +270,7 @@ public class JwtTokenUtil {
     }
 
     public Claims extractAllClaims(String token) {
-        return Jwts.parser().setSigningKey(publicKey).build().parseClaimsJws(token).getBody();
+        return Jwts.parser().verifyWith(publicKey).build().parseSignedClaims(token).getPayload();
     }
 
     private String getSubject(String token) {

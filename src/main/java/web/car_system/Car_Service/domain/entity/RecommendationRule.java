@@ -31,5 +31,6 @@ public class RecommendationRule {
     private String suggestionJson;
 
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private boolean isActive = true; // Giá trị mặc định là true
 }
