@@ -51,7 +51,7 @@ public class SecurityConfig {
                                 Endpoint.V1.AUTH.RESET_PASSWORD,
                                 Endpoint.V1.AUTH.GOOGLE_ONE_TAP
                         ).permitAll()
-                        .requestMatchers("actualtor/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers(Endpoint.V1.OPTIONS.OPTIONS_BY_SOURCE_NAME).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.SPECIFICATIONS_SCHEMA).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.CAR_ID_SUGGESTIONS).permitAll()

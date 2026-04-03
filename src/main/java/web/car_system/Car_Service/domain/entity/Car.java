@@ -122,4 +122,12 @@ public class Car extends BaseEntity{
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<CarAttribute> carAttributes;
+
+    // Aggregate fields cho bình luận (cập nhật bởi CarCommentService)
+    @Column(name = "average_comment_rating")
+    private Double averageCommentRating;
+
+    @Column(name = "total_comments", nullable = false)
+    @Builder.Default
+    private Integer totalComments = 0;
 }

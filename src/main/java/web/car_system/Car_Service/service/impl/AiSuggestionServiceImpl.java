@@ -7,10 +7,8 @@ import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import web.car_system.Car_Service.domain.dto.ai_suggestion_request.SuggestionRequestDTO;
 import web.car_system.Car_Service.domain.dto.ai_suggestion_request.SuggestionResponseDTO;
@@ -24,36 +22,19 @@ public class AiSuggestionServiceImpl implements web.car_system.Car_Service.servi
 
     private static final Logger logger = LoggerFactory.getLogger(AiSuggestionServiceImpl.class);
 
-    private static final String MODEL_NAME = "gemini-1.5-flash-latest"; // Cập nhật model nếu cần
+    private static final String MODEL_NAME = "gemini-1.5-flash-latest";
     private static final String ERROR_MESSAGE = "Đã có lỗi xảy ra! Vui lòng thử lại sau.";
 
-    // 1. Inject API Key trực tiếp vào service từ file application.yml
-    @Value("${google.gemini.api.key}")
-    private String apiKey;
-
-    // 2. Khai báo các dependency mà service sẽ tự tạo
-    private Client geminiClient;
-
+    private final Client geminiClient;
     private final Parser markdownParser;
     private final HtmlRenderer htmlRenderer;
 
-    // 3. Constructor để khởi tạo các công cụ Markdown (giống ChatbotServiceImpl)
-    public AiSuggestionServiceImpl() {
+    // Inject singleton Gemini Client từ GeminiConfig
+    public AiSuggestionServiceImpl(Client geminiClient) {
+        this.geminiClient = geminiClient;
         MutableDataSet options = new MutableDataSet();
         this.markdownParser = Parser.builder(options).build();
         this.htmlRenderer = HtmlRenderer.builder(options).build();
-    }
-
-    // 4. Dùng @PostConstruct để khởi tạo geminiClient SAU KHI apiKey được inject
-    @PostConstruct
-    public void init() {
-        if (apiKey == null || apiKey.isBlank() || apiKey.contains("YOUR_API_KEY")) {
-            logger.error("!!! Google Gemini API key is not configured properly !!!");
-            throw new IllegalArgumentException("Google Gemini API key is missing or invalid.");
-        }
-        // Khởi tạo client trực tiếp trong service
-        this.geminiClient = Client.builder().apiKey(this.apiKey).build();
-        logger.info("Gemini Client for AiSuggestionService initialized successfully.");
     }
 
     // ghi đè

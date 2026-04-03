@@ -31,4 +31,6 @@ public class ShowroomDto {
     
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    private Long availableCarCount;
 }

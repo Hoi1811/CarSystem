@@ -13,8 +13,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.RestClient;
+import org.springframework.http.MediaType;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
@@ -47,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtil jwtTokenUtil;
-    private final WebClient webClient;
+    private final RestClient restClient;
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
     private final RoleService roleService;
@@ -117,9 +117,9 @@ public class AuthServiceImpl implements AuthService {
             }
             redisTemplate.delete("oauth2_state:" + nonce); // one-time use
 
-            OAuth2TokenResponseDTO tokenResponse = exchangeCodeForToken(provider, code).block();
+            OAuth2TokenResponseDTO tokenResponse = exchangeCodeForToken(provider, code);
             if (tokenResponse == null) throw new RuntimeException("Failed to exchange code for token");
-            OAuth2UserInfo userInfo = verifyOAuth2Token(provider, tokenResponse.access_token()).block();
+            OAuth2UserInfo userInfo = verifyOAuth2Token(provider, tokenResponse.access_token());
             if (userInfo == null) throw new RuntimeException("Invalid OAuth2 token");
             User user = createOAuth2User(userInfo.id(), userInfo.name(), provider, userInfo.email(), userInfo.picture());
             Map<String, String> tokens = jwtTokenUtil.generateTokenPair(user);
@@ -143,7 +143,7 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private Mono<OAuth2TokenResponseDTO> exchangeCodeForToken(String provider, String code) {
+    private OAuth2TokenResponseDTO exchangeCodeForToken(String provider, String code) {
         String tokenUri = switch (provider.toLowerCase()) {
             case "google" -> googleTokenUri;
             case "facebook" -> facebookTokenUri;
@@ -152,21 +152,25 @@ public class AuthServiceImpl implements AuthService {
         String clientId = provider.equals("google") ? googleClientId : facebookClientId;
         String clientSecret = provider.equals("google") ? googleClientSecret : facebookClientSecret;
 
-        return webClient.post()
-                .uri(tokenUri)
-                .bodyValue(Map.of(
-                        "code", code,
-                        "client_id", clientId,
-                        "client_secret", clientSecret,
-                        "redirect_uri", redirectUri,
-                        "grant_type", "authorization_code"
-                ))
-                .retrieve()
-                .bodyToMono(OAuth2TokenResponseDTO.class)
-                .onErrorResume(e -> Mono.error(new RuntimeException("Token exchange failed: " + e.getMessage())));
+        try {
+            return restClient.post()
+                    .uri(tokenUri)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                            "code", code,
+                            "client_id", clientId,
+                            "client_secret", clientSecret,
+                            "redirect_uri", redirectUri,
+                            "grant_type", "authorization_code"
+                    ))
+                    .retrieve()
+                    .body(OAuth2TokenResponseDTO.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Token exchange failed: " + e.getMessage(), e);
+        }
     }
 
-    private Mono<OAuth2UserInfo> verifyOAuth2Token(String provider, String accessToken) {
+    private OAuth2UserInfo verifyOAuth2Token(String provider, String accessToken) {
         String userInfoUri = switch (provider.toLowerCase()) {
             case "google" -> googleUserInfoUri;
             case "facebook" -> facebookUserInfoUri;
@@ -175,13 +179,15 @@ public class AuthServiceImpl implements AuthService {
         Class<? extends OAuth2UserInfo> userInfoClass = provider.equals("google")
                 ? OAuth2UserInfoGoogle.class
                 : OAuth2UserInfoFacebook.class;
-        return webClient.get()
-                .uri(userInfoUri)
-                .header("Authorization", "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(userInfoClass)
-                .cast(OAuth2UserInfo.class)
-                .onErrorResume(e -> Mono.error(new RuntimeException("Token verification failed: " + e.getMessage())));
+        try {
+            return restClient.get()
+                    .uri(userInfoUri)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(userInfoClass);
+        } catch (Exception e) {
+            throw new RuntimeException("Token verification failed: " + e.getMessage(), e);
+        }
     }
 
     @Transactional
@@ -422,11 +428,10 @@ public class AuthServiceImpl implements AuthService {
     public GlobalResponseDTO<NoPaginatedMeta, Void> handleGoogleOneTap(String credential, HttpServletResponse response) {
         try {
             // Verify the Google ID token via Google's tokeninfo endpoint
-            Map<?, ?> tokenInfo = webClient.get()
+            Map<?, ?> tokenInfo = restClient.get()
                     .uri("https://oauth2.googleapis.com/tokeninfo?id_token=" + credential)
                     .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+                    .body(Map.class);
 
             if (tokenInfo == null) {
                 throw new RuntimeException("Failed to verify Google ID token");

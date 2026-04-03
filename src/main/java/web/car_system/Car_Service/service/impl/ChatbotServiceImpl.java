@@ -5,8 +5,6 @@ import com.google.genai.Chat;
 import com.google.genai.Client;
 import com.google.genai.types.*;
 import com.vladsch.flexmark.util.ast.Node;
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import web.car_system.Car_Service.domain.dto.chatbot.ChatRequestDTO;
 import web.car_system.Car_Service.domain.dto.chatbot.ChatResponseDTO;
@@ -25,29 +23,21 @@ import com.vladsch.flexmark.util.data.MutableDataSet;
 @Service
 public class ChatbotServiceImpl implements ChatbotService {
     private final String DEFAULT_SYSTEM_INSTRUCTION = "Bạn là một trợ lý AI chuyên về dịch vụ xe hơi. Hãy trả lời ngắn gọn, lịch sự, đưa ra ý chính và chỉ cung cấp thông tin liên quan đến xe hơi, dịch vụ sửa chữa, hoặc bảo trì. Nếu không biết câu trả lời, hãy nói 'Tôi không có thông tin về vấn đề này, vui lòng liên hệ trung tâm dịch vụ.'";
-    private final String MODEL_NAME = "gemini-2.5-flash-lite";
+    private final String MODEL_NAME = "gemini-3.1-flash-lite-preview";
     private final String ERROR_MESSAGE = "Rất xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau.";
     private final String AI_NOT_AVAILABLE = "Trợ lý AI hiện không khả dụng. Vui lòng thử lại sau.";
-    @Value("${google.gemini.api.key}")
-    private String apiKey;
     private final Parser markdownParser;
     private final HtmlRenderer htmlRenderer;
-
-    private Client geminiClient;
-
-
-    public ChatbotServiceImpl() {
-        MutableDataSet options = new MutableDataSet();
-        this.markdownParser = Parser.builder(options).build();
-        this.htmlRenderer = HtmlRenderer.builder(options).build();
-    }
-
+    private final Client geminiClient;
 
     private final Map<String, Chat> activeChatSessions = new ConcurrentHashMap<>();
 
-    @PostConstruct
-    public void init() {
-        this.geminiClient = Client.builder().apiKey(this.apiKey).build();
+    // Inject singleton Gemini Client từ GeminiConfig
+    public ChatbotServiceImpl(Client geminiClient) {
+        this.geminiClient = geminiClient;
+        MutableDataSet options = new MutableDataSet();
+        this.markdownParser = Parser.builder(options).build();
+        this.htmlRenderer = HtmlRenderer.builder(options).build();
     }
 
     @Override

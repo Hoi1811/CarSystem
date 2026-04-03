@@ -16,6 +16,8 @@ import web.car_system.Car_Service.domain.mapper.ShowroomMapper;
 import web.car_system.Car_Service.repositories.ShowroomRepository;
 import web.car_system.Car_Service.repositories.ShowroomReviewRepository;
 import web.car_system.Car_Service.repository.UserRepository;
+import web.car_system.Car_Service.domain.entity.SaleStatus;
+import web.car_system.Car_Service.repository.InventoryCarRepository;
 import web.car_system.Car_Service.service.ShowroomService;
 
 import java.math.BigDecimal;
@@ -30,6 +32,7 @@ public class ShowroomServiceImpl implements ShowroomService {
     private final ShowroomReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final ShowroomMapper showroomMapper;
+    private final InventoryCarRepository inventoryCarRepository;
 
     // ============================================
     // SHOWROOM MANAGEMENT
@@ -38,19 +41,25 @@ public class ShowroomServiceImpl implements ShowroomService {
     @Override
     @Transactional(readOnly = true)
     public Page<ShowroomDto> getAllShowrooms(String keyword, ShowroomStatus status, Pageable pageable) {
+        Page<Showroom> showroomPage;
         if (keyword != null && !keyword.trim().isEmpty()) {
             if (status != null) {
-                return showroomRepository.findByNameContainingIgnoreCaseAndShowroomStatus(keyword, status, pageable)
-                        .map(showroomMapper::toDto);
+                showroomPage = showroomRepository.findByNameContainingIgnoreCaseAndShowroomStatus(keyword, status, pageable);
+            } else {
+                showroomPage = showroomRepository.findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(keyword, keyword, pageable);
             }
-            return showroomRepository.findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(keyword, keyword, pageable)
-                    .map(showroomMapper::toDto);
         } else if (status != null) {
-            return showroomRepository.findByShowroomStatus(status, pageable)
-                    .map(showroomMapper::toDto);
+            showroomPage = showroomRepository.findByShowroomStatus(status, pageable);
+        } else {
+            showroomPage = showroomRepository.findAll(pageable);
         }
-        return showroomRepository.findAll(pageable)
-                .map(showroomMapper::toDto);
+        return showroomPage.map(this::toDtoWithCount);
+    }
+
+    private ShowroomDto toDtoWithCount(Showroom showroom) {
+        ShowroomDto dto = showroomMapper.toDto(showroom);
+        dto.setAvailableCarCount(inventoryCarRepository.countBySaleStatusAndShowroomId(SaleStatus.AVAILABLE, showroom.getId()));
+        return dto;
     }
 
     @Override
@@ -58,7 +67,7 @@ public class ShowroomServiceImpl implements ShowroomService {
     public ShowroomDto getShowroomById(Long id) {
         Showroom showroom = showroomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Showroom not found"));
-        return showroomMapper.toDto(showroom);
+        return toDtoWithCount(showroom);
     }
 
     @Override

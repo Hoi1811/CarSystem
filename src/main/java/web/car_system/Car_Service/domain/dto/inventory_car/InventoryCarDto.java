@@ -34,4 +34,8 @@ public class InventoryCarDto {
     private Long showroomId;
     private String showroomName;
     private String showroomCode;
+    private String showroomAddress;
+    private String showroomPhone;
+    private java.math.BigDecimal showroomLatitude;
+    private java.math.BigDecimal showroomLongitude;
 }

@@ -19,7 +19,7 @@ public interface InventoryCarService {
      * @param pageable Thông tin phân trang.
      * @return Một trang (Page) chứa các InventoryCarDto.
      */
-    Page<InventoryCarDto> getAllAvailableCars(Integer carId, Pageable pageable);
+    Page<InventoryCarDto> getAllAvailableCars(Integer carId, Long showroomId, Pageable pageable);
 
     /**
      * Lấy danh sách TẤT CẢ xe trong kho cho Admin quản lý, có phân trang.

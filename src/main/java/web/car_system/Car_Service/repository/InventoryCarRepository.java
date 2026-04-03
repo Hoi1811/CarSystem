@@ -17,4 +17,12 @@ public interface InventoryCarRepository extends JpaRepository<InventoryCar, Long
     Page<InventoryCar> findAllBySaleStatus(SaleStatus saleStatus, Pageable pageable);
 
     Page<InventoryCar> findAllByCar_CarIdAndSaleStatus(Integer carId, SaleStatus saleStatus, Pageable pageable);
+
+    // Filter by showroom
+    Page<InventoryCar> findAllBySaleStatusAndShowroomId(SaleStatus saleStatus, Long showroomId, Pageable pageable);
+
+    Page<InventoryCar> findAllByCar_CarIdAndSaleStatusAndShowroomId(Integer carId, SaleStatus saleStatus, Long showroomId, Pageable pageable);
+
+    // Count available cars by showroom
+    long countBySaleStatusAndShowroomId(SaleStatus saleStatus, Long showroomId);
 }

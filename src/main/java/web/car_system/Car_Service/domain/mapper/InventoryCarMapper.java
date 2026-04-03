@@ -27,7 +27,11 @@ public interface InventoryCarMapper {
             // Lấy thông tin từ 'showroom' lồng trong InventoryCar
             @Mapping(source = "showroom.id", target = "showroomId"),
             @Mapping(source = "showroom.name", target = "showroomName"),
-            @Mapping(source = "showroom.code", target = "showroomCode")
+            @Mapping(source = "showroom.code", target = "showroomCode"),
+            @Mapping(source = "showroom.address", target = "showroomAddress"),
+            @Mapping(source = "showroom.phone", target = "showroomPhone"),
+            @Mapping(source = "showroom.latitude", target = "showroomLatitude"),
+            @Mapping(source = "showroom.longitude", target = "showroomLongitude")
     })
     InventoryCarDto toDto(InventoryCar inventoryCar);
 

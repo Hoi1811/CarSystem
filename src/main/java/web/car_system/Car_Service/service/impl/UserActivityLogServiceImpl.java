@@ -27,28 +27,28 @@ public class UserActivityLogServiceImpl implements UserActivityLogService {
     private final CarRepository carRepository;
     
     @Override
-    @Async
+    @Async("asyncExecutor")
     @Transactional
     public void logViewCar(Long userId, String sessionId, Integer carId, String ipAddress) {
         logActivity(userId, sessionId, ActivityType.VIEW_CAR, carId, null, null, ipAddress);
     }
     
     @Override
-    @Async
+    @Async("asyncExecutor")
     @Transactional
     public void logViewInventoryCar(Long userId, String sessionId, Long inventoryCarId, Integer carId, String ipAddress) {
         logActivity(userId, sessionId, ActivityType.VIEW_CAR, carId, inventoryCarId, null, ipAddress);
     }
     
     @Override
-    @Async
+    @Async("asyncExecutor")
     @Transactional
     public void logSearch(Long userId, String sessionId, String keyword, String ipAddress) {
         logActivity(userId, sessionId, ActivityType.SEARCH, null, null, keyword, ipAddress);
     }
     
     @Override
-    @Async
+    @Async("asyncExecutor")
     @Transactional
     public void logActivity(
             Long userId,

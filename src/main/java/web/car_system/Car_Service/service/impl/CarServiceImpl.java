@@ -147,6 +147,7 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GlobalResponseDTO<PaginatedMeta, List<CarResponseDTO>> getCarsByApprovalStatus(web.car_system.Car_Service.domain.entity.CarStatus status, int page) {
         Pageable pageable = PageRequest.of(page, 12, Sort.by("updatedAt").descending());
         Page<Car> carPage = carRepository.findByApprovalStatus(status, pageable);
@@ -507,6 +508,7 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GlobalResponseDTO<?, CarDetailsResponseDTO> getCarById(Integer id) {
         try {
             Car car = carRepository.findById(id)
@@ -531,6 +533,7 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GlobalResponseDTO<?, List<CarDetailsResponseDTO>> getAllCars() {
         try {
             List<CarDetailsResponseDTO> cars = carRepository.findAll().stream()
@@ -555,6 +558,7 @@ public class CarServiceImpl implements CarService {
         }
     }
     @Override
+    @Transactional(readOnly = true)
     public GlobalResponseDTO<PaginatedMeta, List<CarResponseDTO>> getAllCarsPaginated(int page) {
         // Mỗi trang 12 phần tử, sắp xếp theo carId giảm dần (xe mới nhất trước)
         Pageable pageable = PageRequest.of(page, 12, Sort.by("carId").ascending());
@@ -591,6 +595,7 @@ public class CarServiceImpl implements CarService {
                 .build();
     }
     @Override
+    @Transactional(readOnly = true)
     public GlobalResponseDTO<PaginatedMeta, List<CarResponseDTO>> getAllCarsPaginated(FilterCarPaginationRequestDTO filter) {
         Sort sort = Sort.by(
                 filter.direction().equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
@@ -1026,6 +1031,7 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GlobalResponseDTO<NoPaginatedMeta, List<CarDetailsResponseDTO>> compareCars(CompareCarsRequestDTO compareCarsRequestDTO) {
         // Sử dụng batch query thay vì findById từng xe một để tránh N+1 query
         List<Car> cars = carRepository.findAllByCarIdIn(compareCarsRequestDTO.ids());

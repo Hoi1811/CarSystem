@@ -66,14 +66,16 @@ public class InventoryCarServiceImpl implements InventoryCarService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<InventoryCarDto> getAllAvailableCars(Integer carId, Pageable pageable) {
+    public Page<InventoryCarDto> getAllAvailableCars(Integer carId, Long showroomId, Pageable pageable) {
         Page<InventoryCar> carPage;
 
-        if (carId != null) {
-            // Nếu có carId, lọc theo carId và trạng thái AVAILABLE
+        if (carId != null && showroomId != null) {
+            carPage = inventoryCarRepository.findAllByCar_CarIdAndSaleStatusAndShowroomId(carId, SaleStatus.AVAILABLE, showroomId, pageable);
+        } else if (carId != null) {
             carPage = inventoryCarRepository.findAllByCar_CarIdAndSaleStatus(carId, SaleStatus.AVAILABLE, pageable);
+        } else if (showroomId != null) {
+            carPage = inventoryCarRepository.findAllBySaleStatusAndShowroomId(SaleStatus.AVAILABLE, showroomId, pageable);
         } else {
-            // Nếu không có, lấy tất cả xe AVAILABLE như cũ
             carPage = inventoryCarRepository.findAllBySaleStatus(SaleStatus.AVAILABLE, pageable);
         }
 

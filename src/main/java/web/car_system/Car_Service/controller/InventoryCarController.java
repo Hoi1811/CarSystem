@@ -36,9 +36,10 @@ public class InventoryCarController {
     @GetMapping(GET_ALL_AVAILABLE)
     public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<InventoryCarDto>>> getAllAvailableCars(
             @RequestParam(required = false) Integer carId,
+            @RequestParam(required = false) Long showroomId,
             @PageableDefault(size = 12) Pageable pageable) {
 
-        Page<InventoryCarDto> carPage = inventoryCarService.getAllAvailableCars(carId, pageable);
+        Page<InventoryCarDto> carPage = inventoryCarService.getAllAvailableCars(carId, showroomId, pageable);
         return ResponseFactory.successPageable(carPage, "Lấy danh sách xe thành công.");
     }
 
