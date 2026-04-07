@@ -2,6 +2,7 @@ package web.car_system.Car_Service.config;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
@@ -78,6 +79,8 @@ public class RedisConfig {
         ObjectMapper objectMapper = new ObjectMapper();
         // Hỗ trợ Java Time API (LocalDateTime, v.v.)
         objectMapper.registerModule(new JavaTimeModule());
+        // Serialize date/time thành ISO string thay vì array
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         // Bỏ qua các property không xác định để tránh lỗi khi deserialize
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         objectMapper.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);

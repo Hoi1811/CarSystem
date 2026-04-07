@@ -13,8 +13,12 @@ public interface AprioriRuleRepository extends JpaRepository<AprioriRule, Long> 
     
     /**
      * Find top N recommendations for a given car (ordered by confidence)
+     * Uses JOIN FETCH to eagerly load Car entities and avoid LazyInitializationException
+     * with soft-deleted cars (Car has @SQLRestriction("deleted_at IS NULL"))
      */
     @Query("SELECT r FROM AprioriRule r " +
+           "JOIN FETCH r.antecedentCar " +
+           "JOIN FETCH r.consequentCar " +
            "WHERE r.antecedentCar.carId = :carId " +
            "ORDER BY r.confidence DESC, r.lift DESC")
     List<AprioriRule> findTopRecommendationsForCar(@Param("carId") Integer carId);
@@ -23,6 +27,8 @@ public interface AprioriRuleRepository extends JpaRepository<AprioriRule, Long> 
      * Find all rules where given car is the consequence (reverse lookup)
      */
     @Query("SELECT r FROM AprioriRule r " +
+           "JOIN FETCH r.antecedentCar " +
+           "JOIN FETCH r.consequentCar " +
            "WHERE r.consequentCar.carId = :carId " +
            "ORDER BY r.confidence DESC")
     List<AprioriRule> findRulesWithConsequent(@Param("carId") Integer carId);

@@ -32,7 +32,7 @@ public class AprioriRecommendationController {
      * 
      * GET /api/v1/apriori-recommendations/cars/{carId}
      */
-    @GetMapping("/apriori-recommendations/cars/{carId}")
+    @GetMapping("/api/v1/apriori-recommendations/cars/{carId}")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<CarSuggestionDto>>> getRecommendationsForCar(
             @PathVariable Integer carId,
             @RequestParam(defaultValue = "5") @Min(1) @Max(50) int limit) {
@@ -56,7 +56,7 @@ public class AprioriRecommendationController {
      * 
      * GET /api/v1/apriori-recommendations/personal
      */
-    @GetMapping("/apriori-recommendations/personal")
+    @GetMapping("/api/v1/apriori-recommendations/personal")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<CarSuggestionDto>>> getPersonalizedRecommendations(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String sessionId,
@@ -90,7 +90,7 @@ public class AprioriRecommendationController {
      * Manual trigger for rule generation (Admin only - should add security)
      * POST /api/v1/apriori-recommendations/generate-rules
      */
-    @PostMapping("/apriori-recommendations/generate-rules")
+    @PostMapping("/api/v1/apriori-recommendations/generate-rules")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, String>> generateRules() {
         int rulesGenerated = recommendationService.generateAprioriRules();
         
