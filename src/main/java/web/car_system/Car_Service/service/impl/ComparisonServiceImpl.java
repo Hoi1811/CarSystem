@@ -51,12 +51,28 @@ public class ComparisonServiceImpl implements ComparisonService {
         // 3. Khởi tạo map điểm số
         Map<Integer, Float> carScores = carIds.stream().collect(Collectors.toMap(id -> id, id -> 0.0f));
 
+        // 3b. Pre-load tất cả enum_order ranks trong 1 query (tránh N+1 trong vòng for)
+        List<Integer> enumAttributeIds = allAttributesToCompare.stream()
+                .filter(a -> a.getComparisonRule() != null
+                        && "enum_order".equalsIgnoreCase(a.getComparisonRule().getCode()))
+                .map(Attribute::getAttributeId)
+                .toList();
+        Map<Integer, Map<String, Integer>> enumRanksByAttributeId = enumAttributeIds.isEmpty()
+                ? Collections.emptyMap()
+                : enumOrderRepository.findByAttributeIdInOrderByRankAsc(enumAttributeIds).stream()
+                .collect(Collectors.groupingBy(
+                        e -> e.getId().getAttributeId(),
+                        Collectors.toMap(
+                                e -> e.getId().getValueKey(),
+                                AttributeEnumOrder::getRank,
+                                (a, b) -> a)));
+
         // 4. Thực hiện so sánh cho từng thuộc tính
         List<AttributeComparisonDTO> attributeComparisons = new ArrayList<>();
         for (Attribute attribute : allAttributesToCompare) {
             Map<Integer, CarAttribute> carAttributeMap = getCarAttributeMapForAllCars(carIds, cars, attribute.getAttributeId());
 
-            List<AttributeValueComparisonDTO> comparedValues = compareAttributeValues(attribute, carAttributeMap, carScores);
+            List<AttributeValueComparisonDTO> comparedValues = compareAttributeValues(attribute, carAttributeMap, carScores, enumRanksByAttributeId);
 
             // Chỉ thêm vào kết quả nếu việc so sánh có ý nghĩa (không phải tất cả đều "—")
             boolean hasMeaningfulValue = comparedValues.stream().anyMatch(dto -> !"—".equals(dto.displayValue()));
@@ -120,7 +136,8 @@ public class ComparisonServiceImpl implements ComparisonService {
     private List<AttributeValueComparisonDTO> compareAttributeValues(
             Attribute attribute,
             Map<Integer, CarAttribute> carAttributeMap,
-            Map<Integer, Float> carScores) {
+            Map<Integer, Float> carScores,
+            Map<Integer, Map<String, Integer>> enumRanksByAttributeId) {
 
         // 1. Lọc ra những xe có dữ liệu hợp lệ (không null, không rỗng) để so sánh
         Map<Integer, CarAttribute> validEntries = carAttributeMap.entrySet().stream()
@@ -157,9 +174,8 @@ public class ComparisonServiceImpl implements ComparisonService {
                     }
                     break;
                 case "enum_order":
-                    Map<String, Integer> rankCache = enumOrderRepository
-                            .findById_AttributeIdOrderByRankAsc(attribute.getAttributeId()).stream()
-                            .collect(Collectors.toMap(e -> e.getId().getValueKey(), AttributeEnumOrder::getRank));
+                    Map<String, Integer> rankCache = enumRanksByAttributeId
+                            .getOrDefault(attribute.getAttributeId(), Collections.emptyMap());
                     for (Map.Entry<Integer, CarAttribute> entry : validEntries.entrySet()) {
                         String valueFromCar = entry.getValue().getValue();
                         Integer rank = rankCache.get(valueFromCar);

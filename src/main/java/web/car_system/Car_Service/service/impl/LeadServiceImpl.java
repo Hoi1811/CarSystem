@@ -75,10 +75,9 @@ public class LeadServiceImpl implements LeadService {
         Lead existingLead = leadRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lead với ID: " + id));
 
-        // Gán nhân viên phụ trách
+        // Gán nhân viên phụ trách (lọc role ngay tại DB, tránh load roles lên app)
         if (request.getAssigneeId() != null) {
-            User assignee = userRepository.findById(request.getAssigneeId())
-                    .filter(user -> user.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName()))) // Chỉ gán cho Admin
+            User assignee = userRepository.findByIdAndRoleName(request.getAssigneeId(), "ROLE_ADMIN")
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy nhân viên (Admin) với ID: " + request.getAssigneeId()));
             existingLead.setAssignee(assignee);
         } else {

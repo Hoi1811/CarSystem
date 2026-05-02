@@ -2,6 +2,8 @@ package web.car_system.Car_Service.service.impl;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import web.car_system.Car_Service.domain.dto.regional_fee.CreateRegionalFeeRequest;
@@ -71,6 +73,7 @@ public class RegionalFeeServiceImpl implements RegionalFeeService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("regionalFees")
     public List<RegionalFeeDto> getAllRegionalFees() {
         return regionalFeeRepository.findAll().stream()
                 .map(regionalFeeMapper::toDto)
@@ -79,6 +82,7 @@ public class RegionalFeeServiceImpl implements RegionalFeeService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "regionalFees", allEntries = true)
     public RegionalFeeDto createRegionalFee(CreateRegionalFeeRequest request) {
         // Kiểm tra xem tỉnh/thành đã tồn tại chưa
         if (regionalFeeRepository.findByProvinceCity(request.getProvinceCity()).isPresent()) {
@@ -92,6 +96,7 @@ public class RegionalFeeServiceImpl implements RegionalFeeService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "regionalFees", allEntries = true)
     public RegionalFeeDto updateRegionalFee(Long id, UpdateRegionalFeeRequest request) {
         RegionalFee existingFee = regionalFeeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy cấu hình phí với ID: " + id));
@@ -105,6 +110,7 @@ public class RegionalFeeServiceImpl implements RegionalFeeService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "regionalFees", allEntries = true)
     public void deleteRegionalFee(Long id) {
         if (!regionalFeeRepository.existsById(id)) {
             throw new EntityNotFoundException("Không thể xóa. Không tìm thấy cấu hình phí với ID: " + id);

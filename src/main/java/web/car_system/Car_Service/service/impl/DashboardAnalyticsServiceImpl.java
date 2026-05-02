@@ -179,26 +179,16 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
      */
     private List<SalesStaffPerformanceDto> getTopSalesStaff(int limit) {
         log.info("Fetching top {} sales staff", limit);
-        
-        List<Object[]> results = salesOrderRepository.findTopSalesStaff(PageRequest.of(0, limit));
-        List<SalesStaffPerformanceDto> staff = new ArrayList<>();
-        
-        for (Object[] row : results) {
-            Long staffId = (Long) row[0];
-            String staffName = (String) row[1];
-            Long totalOrders = (Long) row[2];
-            BigDecimal totalRevenue = (BigDecimal) row[3];
-            
-            staff.add(SalesStaffPerformanceDto.builder()
-                .staffId(staffId)
-                .staffName(staffName)
-                .totalOrders(totalOrders)
-                .totalRevenue(totalRevenue)
-                .completedOrders(0L) // Can add if needed
-                .conversionRate(0.0) // Can calculate if needed
-                .build());
-        }
-        
-        return staff;
+
+        return salesOrderRepository.findTopSalesStaff(PageRequest.of(0, limit)).stream()
+                .map(p -> SalesStaffPerformanceDto.builder()
+                        .staffId(p.staffId())
+                        .staffName(p.staffName())
+                        .totalOrders(p.totalOrders())
+                        .totalRevenue(p.totalRevenue())
+                        .completedOrders(0L)
+                        .conversionRate(0.0)
+                        .build())
+                .toList();
     }
 }

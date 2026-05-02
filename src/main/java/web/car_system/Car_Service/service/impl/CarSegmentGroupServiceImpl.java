@@ -1,6 +1,8 @@
 package web.car_system.Car_Service.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class CarSegmentGroupServiceImpl implements CarSegmentGroupService {
     private final CarSegmentGroupMapper groupMapper;
 
     @Override
+    @CacheEvict(value = "carSegmentGroups", allEntries = true)
     public GlobalResponseDTO<?, CarSegmentGroupResponseDTO> createGroup(CarSegmentGroupCreateDTO createDTO) {
         if (groupRepository.existsByName(createDTO.name())) {
             throw new RuntimeException("Tên nhóm phân khúc đã tồn tại");
@@ -58,6 +61,7 @@ public class CarSegmentGroupServiceImpl implements CarSegmentGroupService {
     }
 
     @Override
+    @Cacheable("carSegmentGroups")
     public GlobalResponseDTO<?, List<CarSegmentGroupResponseDTO>> getAllGroups() {
         List<CarSegmentGroupResponseDTO> groups = groupRepository.findAll().stream()
                 .map(groupMapper::toResponseDTO)
@@ -98,6 +102,7 @@ public class CarSegmentGroupServiceImpl implements CarSegmentGroupService {
     }
 
     @Override
+    @CacheEvict(value = "carSegmentGroups", allEntries = true)
     public GlobalResponseDTO<?, CarSegmentGroupResponseDTO> updateGroup(Integer id, CarSegmentGroupUpdateDTO updateDTO) {
         CarSegmentGroup group = groupRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhóm phân khúc"));
@@ -122,6 +127,7 @@ public class CarSegmentGroupServiceImpl implements CarSegmentGroupService {
     }
 
     @Override
+    @CacheEvict(value = "carSegmentGroups", allEntries = true)
     public GlobalResponseDTO<?, Void> deleteGroup(Integer id) {
         if (groupRepository.isGroupInUse(id)) {
             throw new RuntimeException("Không thể xóa nhóm phân khúc đang được sử dụng");

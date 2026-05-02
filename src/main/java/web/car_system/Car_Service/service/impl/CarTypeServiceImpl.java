@@ -1,6 +1,8 @@
 package web.car_system.Car_Service.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class CarTypeServiceImpl implements CarTypeService {
     private final ImageService imageUploadService;
 
     @Override
+    @CacheEvict(value = "carTypes", allEntries = true)
     public GlobalResponseDTO<?, CarTypeResponseDTO> createCarType(CarTypeCreateDTO createDTO) throws IOException {
         // Upload thumbnail
         String thumbnailUrl = imageUploadService.uploadCarTypeThumbnail(createDTO.thumbnailFile());
@@ -68,6 +71,7 @@ public class CarTypeServiceImpl implements CarTypeService {
     }
 
     @Override
+    @Cacheable("carTypes")
     public GlobalResponseDTO<?, List<CarTypeResponseDTO>> getAllCarTypes() {
         List<CarTypeResponseDTO> carTypes = carTypeRepository.findAll().stream()
                 .map(carTypeMapper::toResponseDTO)
@@ -108,6 +112,7 @@ public class CarTypeServiceImpl implements CarTypeService {
     }
 
     @Override
+    @CacheEvict(value = "carTypes", allEntries = true)
     public GlobalResponseDTO<?, CarTypeResponseDTO> updateCarType(Integer typeId, CarTypeUpdateDTO updateDTO) throws IOException {
         CarType carType = carTypeRepository.findById(typeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy loại xe"));
@@ -134,6 +139,7 @@ public class CarTypeServiceImpl implements CarTypeService {
     }
 
     @Override
+    @CacheEvict(value = "carTypes", allEntries = true)
     public GlobalResponseDTO<?, Void> deleteCarType(Integer typeId) {
         carTypeRepository.deleteById(typeId);
 

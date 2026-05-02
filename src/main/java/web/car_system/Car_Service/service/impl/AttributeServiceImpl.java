@@ -4,6 +4,9 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +40,10 @@ public class AttributeServiceImpl implements AttributeService {
 
     @Override
     @Transactional // Ghi đè readOnly=true, cho phép ghi vào DB
+    @Caching(evict = {
+            @CacheEvict(value = "attributes", allEntries = true),
+            @CacheEvict(value = {"specifications", "formSchema"}, allEntries = true)
+    })
     public AttributeResponseDTO createAttribute(AttributeRequestDTO requestDTO) {
         // Kiểm tra xem tên attribute đã tồn tại chưa
         if (attributeRepository.existsByName(requestDTO.name())) {
@@ -62,6 +69,7 @@ public class AttributeServiceImpl implements AttributeService {
     }
 
     @Override
+    @Cacheable("attributes")
     public List<AttributeResponseDTO> getAllAttributes() {
         return attributeRepository.findAll().stream()
                 .map(AttributeResponseDTO::fromEntity) // Dùng factory method đã tạo
@@ -70,6 +78,10 @@ public class AttributeServiceImpl implements AttributeService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "attributes", allEntries = true),
+            @CacheEvict(value = {"specifications", "formSchema"}, allEntries = true)
+    })
     public AttributeResponseDTO updateAttribute(Integer id, AttributeRequestDTO requestDTO) {
         Attribute existingAttribute = attributeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thuộc tính với ID: " + id));
@@ -90,6 +102,10 @@ public class AttributeServiceImpl implements AttributeService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "attributes", allEntries = true),
+            @CacheEvict(value = {"specifications", "formSchema"}, allEntries = true)
+    })
     public void deleteAttribute(Integer id) {
         // 1. Kiểm tra xem attribute có tồn tại không
         if (!attributeRepository.existsById(id)) {

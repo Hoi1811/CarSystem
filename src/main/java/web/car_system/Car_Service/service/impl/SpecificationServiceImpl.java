@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ public class SpecificationServiceImpl implements SpecificationService {
     private final SpecificationRepository specificationRepository;
 
     @Override
+    @CacheEvict(value = {"specifications", "formSchema"}, allEntries = true)
     public Specification createSpecification(String name) {
         Specification specification = new Specification();
         specification.setName(name);
@@ -34,6 +36,7 @@ public class SpecificationServiceImpl implements SpecificationService {
     }
 
     @Override
+    @CacheEvict(value = {"specifications", "formSchema"}, allEntries = true)
     public Specification updateSpecification(Integer id, String name) {
         Specification specification = specificationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Specification not found"));
@@ -42,12 +45,14 @@ public class SpecificationServiceImpl implements SpecificationService {
     }
 
     @Override
+    @CacheEvict(value = {"specifications", "formSchema"}, allEntries = true)
     public void deleteSpecification(Integer id) {
         Specification specification = specificationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Specification not found"));
         specificationRepository.delete(specification);
     }
     @Override
+    @Cacheable("specifications")
     public GlobalResponseDTO<NoPaginatedMeta, List<SpecificationOnlyResponseDTO>> findAllSpecificationsWithLimitedAttributes() {
 
 
@@ -116,6 +121,7 @@ public class SpecificationServiceImpl implements SpecificationService {
     }
 
     @Override
+    @Cacheable("formSchema")
     public GlobalResponseDTO<NoPaginatedMeta, List<SpecificationOnlyResponseDTO>> getFormSchema() {
         // Gọi query mới
         List<Object[]> results = specificationRepository.findFormSchemaData();

@@ -11,6 +11,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.Where;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -108,6 +109,7 @@ public class Car extends BaseEntity{
     // Ảnh xe
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL)
     @JsonIgnore
+    @NotAudited
     private List<Image> images;
 
     @Enumerated(EnumType.STRING)
@@ -121,6 +123,7 @@ public class Car extends BaseEntity{
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @NotAudited
     private List<CarAttribute> carAttributes;
 
     // Aggregate fields cho bình luận (cập nhật bởi CarCommentService)

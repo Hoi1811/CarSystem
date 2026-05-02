@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import web.car_system.Car_Service.domain.dto.analytics.TopSalesStaffProjection;
 import web.car_system.Car_Service.domain.entity.InventoryCar;
 import web.car_system.Car_Service.domain.entity.OrderStatus;
 import web.car_system.Car_Service.domain.entity.SalesOrder;
@@ -106,14 +107,14 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long>, J
     long countByOrderStatus(@Param("status") OrderStatus status);
     
     /**
-     * Get top performing sales staff
-     * Returns: staffId, staffName, orderCount, totalRevenue
+     * Get top performing sales staff (typed projection — type-safe, no Object[] casting)
      */
-    @Query("SELECT o.salesStaff.userId, o.salesStaff.fullName, " +
-           "COUNT(o), SUM(CASE WHEN o.orderStatus = 'COMPLETED' THEN o.totalPrice ELSE 0 END) " +
-           "FROM SalesOrder o " +
-           "WHERE o.salesStaff IS NOT NULL " +
-           "GROUP BY o.salesStaff.userId, o.salesStaff.fullName " +
+    @Query("SELECT new web.car_system.Car_Service.domain.dto.analytics.TopSalesStaffProjection(" +
+           "  s.userId, s.fullName, COUNT(o), " +
+           "  SUM(CASE WHEN o.orderStatus = 'COMPLETED' THEN o.totalPrice ELSE 0 END)" +
+           ") " +
+           "FROM SalesOrder o JOIN o.salesStaff s " +
+           "GROUP BY s.userId, s.fullName " +
            "ORDER BY SUM(CASE WHEN o.orderStatus = 'COMPLETED' THEN o.totalPrice ELSE 0 END) DESC")
-    List<Object[]> findTopSalesStaff(org.springframework.data.domain.Pageable pageable);
+    List<TopSalesStaffProjection> findTopSalesStaff(org.springframework.data.domain.Pageable pageable);
 }

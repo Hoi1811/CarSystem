@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -509,6 +510,7 @@ public class CarServiceImpl implements CarService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "carDetails", key = "#id", unless = "#result == null || #result.data == null")
     public GlobalResponseDTO<?, CarDetailsResponseDTO> getCarById(Integer id) {
         try {
             Car car = carRepository.findById(id)
@@ -637,6 +639,7 @@ public class CarServiceImpl implements CarService {
     }
     @Override
     @Transactional
+    @CacheEvict(value = "carDetails", key = "#carId")
     public GlobalResponseDTO<?, CarDetailsResponseDTO> updateCar(Integer carId, UpdateCarRequestDTO carRequest, List<MultipartFile> newImages) {
         try {
             CarDetailsResponseDTO response = updateCarInternal(carId, carRequest, newImages);
@@ -950,6 +953,7 @@ public class CarServiceImpl implements CarService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "carDetails", key = "#id")
     public GlobalResponseDTO<?, Void> deleteCar(Integer id) {
         try {
             Car car = carRepository.findById(id)

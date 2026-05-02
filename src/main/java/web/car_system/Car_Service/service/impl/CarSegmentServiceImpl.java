@@ -1,6 +1,8 @@
 package web.car_system.Car_Service.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class CarSegmentServiceImpl implements CarSegmentService {
     private final CarSegmentMapper segmentMapper;
 
     @Override
+    @CacheEvict(value = {"carSegments", "carSegmentsByGroup"}, allEntries = true)
     public GlobalResponseDTO<?, CarSegmentResponseDTO> createSegment(CarSegmentCreateDTO createDTO) {
         if (segmentRepository.existsByName(createDTO.name())) {
             throw new RuntimeException("Tên phân khúc đã tồn tại");
@@ -66,6 +69,7 @@ public class CarSegmentServiceImpl implements CarSegmentService {
     }
 
     @Override
+    @Cacheable("carSegments")
     public GlobalResponseDTO<?, List<CarSegmentResponseDTO>> getAllSegments() {
         List<CarSegmentResponseDTO> segments = segmentRepository.findAll().stream()
                 .map(segmentMapper::toResponseDTO)
@@ -106,6 +110,7 @@ public class CarSegmentServiceImpl implements CarSegmentService {
     }
 
     @Override
+    @Cacheable(value = "carSegmentsByGroup", key = "#groupId")
     public GlobalResponseDTO<?, List<CarSegmentResponseDTO>> getSegmentsByGroup(Integer groupId) {
         List<CarSegmentResponseDTO> segments = segmentRepository.findByGroupId(groupId).stream()
                 .map(segmentMapper::toResponseDTO)
@@ -122,6 +127,7 @@ public class CarSegmentServiceImpl implements CarSegmentService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"carSegments", "carSegmentsByGroup"}, allEntries = true)
     public GlobalResponseDTO<?, CarSegmentResponseDTO> updateSegment(Integer segmentId, CarSegmentUpdateDTO updateDTO) {
         CarSegment segment = segmentRepository.findById(segmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phân khúc xe"));
@@ -151,6 +157,7 @@ public class CarSegmentServiceImpl implements CarSegmentService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"carSegments", "carSegmentsByGroup"}, allEntries = true)
     public GlobalResponseDTO<?, Void> deleteSegment(Integer segmentId) {
         if (segmentRepository.isSegmentInUse(segmentId)) {
             throw new RuntimeException("Không thể xóa phân khúc đang được sử dụng");
@@ -167,6 +174,7 @@ public class CarSegmentServiceImpl implements CarSegmentService {
     }
     @Override
     @Transactional
+    @CacheEvict(value = {"carSegments", "carSegmentsByGroup"}, allEntries = true)
     public GlobalResponseDTO<?, List<CarSegmentResponseDTO>> createBatchSegments(CarSegmentBatchCreateDTO batchCreateDTO) {
         // Kiểm tra group tồn tại
         CarSegmentGroup group = groupRepository.findById(batchCreateDTO.groupId())

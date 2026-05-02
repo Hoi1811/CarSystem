@@ -119,9 +119,18 @@ public class Endpoint {
 
         public static final class AUDIT {
             public static final String AUDIT = PREFIX + "/audits";
+            // Legacy (BC): /api/v1/audits/cars/{id}, /api/v1/audits/cars/{id}/revision/{revisionNumber}
             public static final String CAR_AUDIT_HISTORY = AUDIT + "/cars/{id}";
             public static final String CAR_AT_REVISION = AUDIT + "/cars/{id}/revision/{revisionNumber}";
 
+            // Generic (Phase A): /api/v1/audits/{entityType}/{id}/...
+            public static final String ENTITY_HISTORY = AUDIT + "/{entityType}/{id}/history";
+            public static final String ENTITY_AT_REVISION = AUDIT + "/{entityType}/{id}/revisions/{revisionNumber}";
+            public static final String ENTITY_DIFF = AUDIT + "/{entityType}/{id}/diff";
+
+            // Recent timeline + types meta
+            public static final String RECENT = AUDIT + "/recent";
+            public static final String TYPES = AUDIT + "/types";
         }
 
         public static final class OPTIONS {

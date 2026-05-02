@@ -17,9 +17,14 @@ import web.car_system.Car_Service.service.CarCommentService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,28 +40,51 @@ public class CarCommentServiceImpl implements CarCommentService {
     @Override
     @Transactional(readOnly = true)
     public Page<CarCommentDto> getCommentsByCar(Integer carId, Long currentUserId, Pageable pageable) {
-        Page<CarComment> comments = commentRepository.findByCarCarIdAndParentIsNullAndCommentStatus(
+        // Query 1: parents + user (single query via @EntityGraph)
+        Page<CarComment> parents = commentRepository.findByCarCarIdAndParentIsNullAndCommentStatus(
                 carId, CommentStatus.VISIBLE, pageable);
 
-        return comments.map(comment -> {
-            CarCommentDto dto = commentMapper.toDto(comment);
+        if (parents.isEmpty()) {
+            return parents.map(commentMapper::toDto);
+        }
 
-            // Load replies
-            List<CarComment> replies = commentRepository.findByParentIdAndCommentStatusOrderByCreatedAtAsc(
-                    comment.getId(), CommentStatus.VISIBLE);
-            List<CarCommentDto> replyDtos = replies.stream().map(reply -> {
-                CarCommentDto replyDto = commentMapper.toDto(reply);
-                if (currentUserId != null) {
-                    replyDto.setLikedByCurrentUser(likeRepository.existsByCommentIdAndUserUserId(reply.getId(), currentUserId));
-                }
-                return replyDto;
-            }).toList();
-            dto.setReplies(replyDtos);
+        List<Long> parentIds = parents.getContent().stream()
+                .map(CarComment::getId)
+                .toList();
 
-            // Set like status
-            if (currentUserId != null) {
-                dto.setLikedByCurrentUser(likeRepository.existsByCommentIdAndUserUserId(comment.getId(), currentUserId));
+        // Query 2: all replies in one shot, JOIN FETCH user
+        List<CarComment> allReplies = commentRepository.findRepliesByParentIdsWithUser(
+                parentIds, CommentStatus.VISIBLE);
+
+        Map<Long, List<CarComment>> repliesByParent = allReplies.stream()
+                .collect(Collectors.groupingBy(r -> r.getParent().getId()));
+
+        // Query 3 (only if authenticated): batch-fetch liked comment IDs
+        Set<Long> likedIds = Collections.emptySet();
+        if (currentUserId != null) {
+            List<Long> allCommentIds = new ArrayList<>(parentIds.size() + allReplies.size());
+            allCommentIds.addAll(parentIds);
+            for (CarComment r : allReplies) {
+                allCommentIds.add(r.getId());
             }
+            likedIds = new HashSet<>(likeRepository.findLikedCommentIdsByUser(allCommentIds, currentUserId));
+        }
+
+        final Set<Long> finalLikedIds = likedIds;
+        return parents.map(parent -> {
+            CarCommentDto dto = commentMapper.toDto(parent);
+            dto.setLikedByCurrentUser(finalLikedIds.contains(parent.getId()));
+
+            List<CarCommentDto> replyDtos = repliesByParent
+                    .getOrDefault(parent.getId(), Collections.emptyList())
+                    .stream()
+                    .map(reply -> {
+                        CarCommentDto replyDto = commentMapper.toDto(reply);
+                        replyDto.setLikedByCurrentUser(finalLikedIds.contains(reply.getId()));
+                        return replyDto;
+                    })
+                    .toList();
+            dto.setReplies(replyDtos);
             return dto;
         });
     }
@@ -85,8 +113,18 @@ public class CarCommentServiceImpl implements CarCommentService {
             CarComment targetComment = commentRepository.findById(request.getParentId())
                     .orElseThrow(() -> new RuntimeException("Parent comment not found"));
 
-            // Determine the root: if targetComment itself has a parent, use that parent as root
-            CarComment rootComment = targetComment.getParent() != null ? targetComment.getParent() : targetComment;
+            CarComment targetParent = targetComment.getParent();
+            if (targetParent != null && targetParent.getId().equals(targetComment.getId())) {
+                throw new IllegalStateException(
+                        "Comment data corrupt: self-referencing parent at id=" + targetComment.getId());
+            }
+
+            CarComment rootComment = targetParent != null ? targetParent : targetComment;
+            if (rootComment.getParent() != null) {
+                throw new IllegalStateException(
+                        "Reply depth exceeds 2 levels (root + reply). Root candidate id="
+                                + rootComment.getId() + " still has a parent — possible corrupt chain.");
+            }
             builder.parent(rootComment);
 
             // If replying to a reply (not the root), store @mention info

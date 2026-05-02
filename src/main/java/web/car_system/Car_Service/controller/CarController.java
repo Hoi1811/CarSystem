@@ -260,6 +260,11 @@ public class CarController {
         return ip;
     }
 
+    /**
+     * @deprecated Trả về TOÀN BỘ cars không pagination — nguy hiểm khi data lớn.
+     * Dùng {@code POST /paginated} thay thế. Sẽ bị remove ở phiên bản tiếp theo.
+     */
+    @Deprecated(forRemoval = true)
     @GetMapping(Endpoint.V1.CAR.CAR)
     public ResponseEntity<GlobalResponseDTO<?, ?>> getAllCars() {
         return ResponseEntity.ok(carService.getAllCars());

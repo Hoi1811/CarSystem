@@ -1,6 +1,7 @@
 package web.car_system.Car_Service.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import web.car_system.Car_Service.domain.dto.comparison.ComparisonRuleDto;
@@ -20,6 +21,7 @@ public class ComparisonRuleServiceImpl implements ComparisonRuleService {
     private final ComparisonRuleRepository comparisonRuleRepository;
 
     @Override
+    @Cacheable("comparisonRules")
     public List<ComparisonRuleDto> getAllRules() {
         return comparisonRuleRepository.findAll().stream()
                 .map(r -> new ComparisonRuleDto(r.getId(), r.getCode(), r.getDescription()))

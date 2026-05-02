@@ -33,4 +33,10 @@ public interface AttributeEnumOrderRepository extends JpaRepository<AttributeEnu
 
 
     List<AttributeEnumOrder> findById_AttributeId(Integer attributeId);
+
+    @Query("SELECT aeo FROM AttributeEnumOrder aeo " +
+            "WHERE aeo.id.attributeId IN :attributeIds " +
+            "ORDER BY aeo.id.attributeId ASC, aeo.rank ASC")
+    List<AttributeEnumOrder> findByAttributeIdInOrderByRankAsc(
+            @org.springframework.data.repository.query.Param("attributeIds") List<Integer> attributeIds);
 }

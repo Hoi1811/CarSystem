@@ -1,8 +1,10 @@
 package web.car_system.Car_Service.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
@@ -20,10 +22,26 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 @EnableCaching
 @Configuration
 public class RedisConfig {
+
+    public static final String KEY_PREFIX = "cdss::v1::";
+
+    public static final String CACHE_CAR_SEGMENTS = "carSegments";
+    public static final String CACHE_CAR_SEGMENTS_BY_GROUP = "carSegmentsByGroup";
+    public static final String CACHE_CAR_SEGMENT_GROUPS = "carSegmentGroups";
+    public static final String CACHE_CAR_TYPES = "carTypes";
+    public static final String CACHE_MANUFACTURERS = "manufacturers";
+    public static final String CACHE_SPECIFICATIONS = "specifications";
+    public static final String CACHE_FORM_SCHEMA = "formSchema";
+    public static final String CACHE_ATTRIBUTES = "attributes";
+    public static final String CACHE_REGIONAL_FEES = "regionalFees";
+    public static final String CACHE_COMPARISON_RULES = "comparisonRules";
+    public static final String CACHE_CAR_DETAILS = "carDetails";
 
     @Value("${spring.data.redis.host}")
     private String redisHost;
@@ -43,28 +61,46 @@ public class RedisConfig {
 
 
     @Bean
-    public CacheManager cacheManager(RedisConnectionFactory factory, ObjectMapper redisObjectMapper) {
-        // Truyền ObjectMapper qua constructor
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(redisObjectMapper);
-        System.out.println("Using GenericJackson2JsonRedisSerializer for caching");
-        RedisCacheConfiguration cacheConfig = RedisCacheConfiguration.defaultCacheConfig()
+    public CacheManager cacheManager(RedisConnectionFactory factory) {
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(buildRedisObjectMapper());
+
+        RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(30))
                 .disableCachingNullValues()
+                .computePrefixWith(name -> KEY_PREFIX + name + "::")
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 
+        Duration day = Duration.ofDays(1);
+        Duration sixHours = Duration.ofHours(6);
+        Duration fifteenMin = Duration.ofMinutes(15);
+
+        Map<String, RedisCacheConfiguration> perCache = new HashMap<>();
+        perCache.put(CACHE_CAR_SEGMENTS, defaults.entryTtl(day));
+        perCache.put(CACHE_CAR_SEGMENTS_BY_GROUP, defaults.entryTtl(day));
+        perCache.put(CACHE_CAR_SEGMENT_GROUPS, defaults.entryTtl(day));
+        perCache.put(CACHE_CAR_TYPES, defaults.entryTtl(day));
+        perCache.put(CACHE_MANUFACTURERS, defaults.entryTtl(day));
+        perCache.put(CACHE_SPECIFICATIONS, defaults.entryTtl(sixHours));
+        perCache.put(CACHE_FORM_SCHEMA, defaults.entryTtl(sixHours));
+        perCache.put(CACHE_ATTRIBUTES, defaults.entryTtl(sixHours));
+        perCache.put(CACHE_REGIONAL_FEES, defaults.entryTtl(day));
+        perCache.put(CACHE_COMPARISON_RULES, defaults.entryTtl(day));
+        perCache.put(CACHE_CAR_DETAILS, defaults.entryTtl(fifteenMin));
+
         return RedisCacheManager.builder(factory)
-                .cacheDefaults(cacheConfig)
+                .cacheDefaults(defaults)
+                .withInitialCacheConfigurations(perCache)
                 .build();
     }
 
 
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory, ObjectMapper redisObjectMapper) {
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);
 
         // Sử dụng GenericJackson2JsonRedisSerializer với ObjectMapper đã cấu hình
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(redisObjectMapper);
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(buildRedisObjectMapper());
 
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
@@ -74,35 +110,32 @@ public class RedisConfig {
         return template;
     }
 
-    @Bean
-    public ObjectMapper redisObjectMapper() {
+    /**
+     * ObjectMapper riêng cho Redis cache — KHÔNG expose thành `@Bean` để Spring Boot
+     * không pick nó làm primary `ObjectMapper` cho Web. Nếu là bean public, Web sẽ
+     * dùng nó để parse HTTP request body và đòi mọi JSON client gửi lên phải có
+     * trường `@class` → vỡ toàn bộ API.
+     *
+     * Default typing ở đây là bắt buộc cho cache: các method `@Cacheable` trả
+     * generic wrapper như `GlobalResponseDTO<?, T>` cần `@class` trong JSON Redis
+     * mới deserialize đúng kiểu, không bị fallback `LinkedHashMap` → ClassCastException.
+     *
+     * Validator chỉ allow base `Object` — đủ permissive vì cache là dữ liệu nội bộ
+     * do app tự ghi/đọc, không phải input từ client. Khi đổi config, FLUSH các key
+     * `cdss::v1::*` cũ trong Redis vì format JSON cũ không có `@class`.
+     */
+    private ObjectMapper buildRedisObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
-        // Hỗ trợ Java Time API (LocalDateTime, v.v.)
         objectMapper.registerModule(new JavaTimeModule());
-        // Serialize date/time thành ISO string thay vì array
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        // Bỏ qua các property không xác định để tránh lỗi khi deserialize
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         objectMapper.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
+
+        BasicPolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfBaseType(Object.class)
+                .build();
+        objectMapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.EVERYTHING, JsonTypeInfo.As.PROPERTY);
+
         return objectMapper;
     }
-// cau hinh cho CacheManager
-//    @Bean
-//    public ObjectMapper redisObjectMapper() {
-//        ObjectMapper objectMapper = new ObjectMapper();
-//        SimpleModule module = new SimpleModule();
-//        module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ISO_DATE_TIME));
-//        module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ISO_DATE_TIME));
-//        objectMapper.registerModule(module);
-//        objectMapper.registerModule(new JavaTimeModule());
-//        // Cấu hình polymorphic type handling
-//        objectMapper.activateDefaultTyping(
-//                objectMapper.getPolymorphicTypeValidator(),
-//                ObjectMapper.DefaultTyping.EVERYTHING,
-//                JsonTypeInfo.As.PROPERTY
-//        );
-//        // Cho phép bỏ qua các property không xác định
-//        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-//        return objectMapper;
-//    }
 }
