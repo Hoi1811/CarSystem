@@ -3,16 +3,18 @@ package web.car_system.Car_Service.service.impl;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.Transformation;
 import com.cloudinary.utils.ObjectUtils;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import web.car_system.Car_Service.domain.dto.car.CarDetailsResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.GlobalResponseDTO;
 import web.car_system.Car_Service.domain.dto.global.NoPaginatedMeta;
 import web.car_system.Car_Service.domain.dto.global.Status;
+import web.car_system.Car_Service.domain.dto.image.BulkDeleteImagesResponseDTO;
+import web.car_system.Car_Service.domain.dto.image.CarImageStatusDTO;
 import web.car_system.Car_Service.domain.dto.image.CarImagesResponseDTO;
 import web.car_system.Car_Service.domain.entity.Car;
 import web.car_system.Car_Service.domain.entity.Image;
@@ -23,217 +25,277 @@ import web.car_system.Car_Service.service.ImageService;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ImageServiceImpl implements ImageService {
 
     private final CarRepository carRepository;
-
     private final ImageRepository imageRepository;
-
     private final Cloudinary cloudinary;
 
-    private static final long MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    private static final long MAX_FILE_SIZE = 20L * 1024 * 1024; // 20MB
     private static final List<String> ALLOWED_TYPES = Arrays.asList("image/jpeg", "image/png", "image/gif");
-    private static final int TARGET_WIDTH = 800; // Kích thước mục tiêu
+    private static final int TARGET_WIDTH = 800;
     private static final int TARGET_HEIGHT = 600;
 
+    private static final String FOLDER_CAR_IMAGES = "car_images";
+    private static final String FOLDER_CAR_THUMBNAILS = "car_thumbnails";
+    private static final String FOLDER_MANUFACTURER_THUMBNAILS = "manufacturer_thumbnails";
+    private static final String FOLDER_CAR_TYPE_THUMBNAILS = "car_type_thumbnails";
 
+    // ============================================================
+    // UPLOAD: gallery images cho 1 xe (có dedupe theo MD5)
+    // ============================================================
     @Override
     @Transactional
-    public List<Image> uploadImages(Integer carId, MultipartFile[] files) throws IOException, IllegalAccessError {
+    public List<CarImagesResponseDTO> uploadImages(Integer carId, MultipartFile[] files) throws IOException {
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new IllegalArgumentException("Car not found with ID: " + carId));
 
-        List<Image> uploadedImages = new ArrayList<>();
+        List<CarImagesResponseDTO> result = new ArrayList<>();
         for (MultipartFile file : files) {
-            // Kiểm tra file
-            if (file.isEmpty()) {
-                throw new IllegalArgumentException("One or more files are empty");
-            }
-            if (file.getSize() > MAX_FILE_SIZE) {
-                throw new IllegalArgumentException("File size exceeds 20MB limit: " + file.getOriginalFilename());
-            }
-            String contentType = file.getContentType();
-            if (!ALLOWED_TYPES.contains(contentType)) {
-                throw new IllegalArgumentException("Only JPEG, PNG, GIF files are allowed: " + file.getOriginalFilename());
-            }
-            BufferedImage imageCheck = ImageIO.read(file.getInputStream());
-            if (imageCheck == null) {
-                throw new IllegalArgumentException("Invalid image file: " + file.getOriginalFilename());
+            validateImageFile(file);
+            byte[] bytes = file.getBytes();
+            String fileHash = computeMd5(bytes);
+
+            Optional<Image> existing = imageRepository.findFirstByCarCarIdAndFileHash(carId, fileHash);
+            if (existing.isPresent()) {
+                log.info("Skip duplicate upload car={} hash={} → reuse imageId={}", carId, fileHash, existing.get().getImageId());
+                result.add(toDto(existing.get()));
+                continue;
             }
 
-            // Upload lên Cloudinary với resize và padding
-            // Upload lên Cloudinary với resize và padding
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(bytes, ObjectUtils.asMap(
                     "public_id", "car_" + carId + "_" + System.currentTimeMillis(),
-                    "folder", "car_images",
-                    "transformation", Arrays.asList(
-                            // Chuyển đổi kích thước và thêm padding
-                            Map.of("width", TARGET_WIDTH),
-                            Map.of("height", TARGET_HEIGHT),
-                            Map.of("crop", "pad"),
-                            Map.of("background", "black")
-                    )
+                    "folder", FOLDER_CAR_IMAGES,
+                    "transformation", new Transformation()
+                            .width(TARGET_WIDTH).height(TARGET_HEIGHT)
+                            .crop("pad").background("black")
             ));
-            String imageUrl = (String) uploadResult.get("public_id");
+            String publicId = (String) uploadResult.get("public_id");
 
-            // Lưu thông tin vào database
             Image image = new Image();
             image.setCar(car);
-            image.setUrl(imageUrl);
-            uploadedImages.add(imageRepository.save(image));
+            image.setUrl(publicId);
+            image.setFileHash(fileHash);
+            result.add(toDto(imageRepository.save(image)));
         }
-
-        return uploadedImages;
+        return result;
     }
 
+    // ============================================================
+    // GET ảnh theo carId (giữ nguyên signature cũ)
+    // ============================================================
     @Override
     public GlobalResponseDTO<NoPaginatedMeta, List<CarImagesResponseDTO>> getImagesByCarId(Integer carId) {
-        try{
-            List<Image> images = imageRepository.findByCarCarId(carId);
-            List<CarImagesResponseDTO> carImagesResponseDTO = images.stream()
-                    .map(this::convertToDTO)
+        try {
+            List<CarImagesResponseDTO> dtos = imageRepository.findByCarCarId(carId).stream()
+                    .map(this::toDto)
                     .toList();
             return GlobalResponseDTO.<NoPaginatedMeta, List<CarImagesResponseDTO>>builder()
-                    .meta(NoPaginatedMeta.builder()
-                            .status(Status.SUCCESS)
-                            .message("Lấy thông tin xe thành công")
-                            .build())
-                    .data(carImagesResponseDTO)
+                    .meta(NoPaginatedMeta.builder().status(Status.SUCCESS).message("Lấy ảnh thành công").build())
+                    .data(dtos)
                     .build();
-        }catch (Exception e){
+        } catch (Exception e) {
+            log.error("getImagesByCarId failed for carId={}", carId, e);
             return GlobalResponseDTO.<NoPaginatedMeta, List<CarImagesResponseDTO>>builder()
-                    .meta(NoPaginatedMeta.builder()
-                            .status(Status.ERROR)
-                            .message("Lỗi khi lấy thông tin ảnh: " + e.getMessage())
-                            .build())
+                    .meta(NoPaginatedMeta.builder().status(Status.ERROR).message("Lỗi khi lấy ảnh: " + e.getMessage()).build())
                     .data(new ArrayList<>())
                     .build();
         }
-
-    }
-    private CarImagesResponseDTO convertToDTO(Image image) {
-        CarImagesResponseDTO dto = new CarImagesResponseDTO();
-        dto.setImageId(image.getImageId());
-        dto.setUrl(image.getUrl());
-        dto.setFileHash(image.getFileHash());
-        dto.setCarId(image.getCar().getCarId());
-        return dto;
     }
 
+    // ============================================================
+    // UPLOAD thumbnail Manufacturer / CarType / Car
+    // ============================================================
     @Override
     @Transactional
     public String uploadManufacturerThumbnail(MultipartFile file) throws IOException {
-        // Validate file
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File ảnh không được để trống");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("Kích thước file vượt quá 5MB");
-        }
-        if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("Chỉ chấp nhận file ảnh JPEG hoặc PNG");
-        }
-
-        // Check if valid image
-        BufferedImage image = ImageIO.read(file.getInputStream());
-        if (image == null) {
-            throw new IllegalArgumentException("File không phải là ảnh hợp lệ");
-        }
-
-        // Upload original image (NO TRANSFORMATION)
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                "folder", "manufacturer_thumbnails",
+        validateImageFile(file);
+        Map<?, ?> r = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                "folder", FOLDER_MANUFACTURER_THUMBNAILS,
                 "public_id", "manufacturer_" + System.currentTimeMillis(),
-                "resource_type", "auto" // Tự động nhận định dạng
+                "resource_type", "auto"
         ));
-
-        return (String) uploadResult.get("public_id");
+        return (String) r.get("public_id");
     }
+
     @Override
     @Transactional
     public String uploadCarTypeThumbnail(MultipartFile file) throws IOException {
-        // Validate file
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File ảnh không được để trống");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("Kích thước file vượt quá 5MB");
-        }
-        if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("Chỉ chấp nhận file ảnh JPEG hoặc PNG");
-        }
-
-        BufferedImage image = ImageIO.read(file.getInputStream());
-        if (image == null) {
-            throw new IllegalArgumentException("File không phải là ảnh hợp lệ");
-        }
-
-        // Upload to Cloudinary với thư mục riêng cho CarType
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                "folder", "car_type_thumbnails",
+        validateImageFile(file);
+        Map<?, ?> r = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                "folder", FOLDER_CAR_TYPE_THUMBNAILS,
                 "public_id", "car_type_" + System.currentTimeMillis(),
-                "resource_type", "auto" // Tự động nhận định dạng
+                "resource_type", "auto"
         ));
-
-        return (String) uploadResult.get("public_id");
+        return (String) r.get("public_id");
     }
 
     @Override
     @Transactional
     public String uploadCarThumbnail(Integer carId, MultipartFile file) throws IOException {
-        // Validate car existence
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new IllegalArgumentException("Car not found with ID: " + carId));
+        validateImageFile(file);
 
-        // Validate file
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("Thumbnail file cannot be empty");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("File size exceeds 20MB limit: " + file.getOriginalFilename());
-        }
-        if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("Only JPEG, PNG, GIF files are allowed: " + file.getOriginalFilename());
-        }
-
-        // Read file into bytes to avoid stream consumption
-        byte[] fileBytes = file.getBytes();
-        BufferedImage image = ImageIO.read(new ByteArrayInputStream(fileBytes));
-        if (image == null) {
-            // Save file to disk for inspection
-            File tempFile = new File("temp_" + file.getOriginalFilename());
-            file.transferTo(tempFile);
-            System.out.println("Saved temp file to: " + tempFile.getAbsolutePath());
-            throw new IllegalArgumentException("Invalid image file: " + file.getOriginalFilename());
-        }
-
-        // Upload to Cloudinary with specific folder and transformations
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                "folder", "car_thumbnails",
+        Map<?, ?> r = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                "folder", FOLDER_CAR_THUMBNAILS,
                 "public_id", "car_thumbnail_" + carId + "_" + System.currentTimeMillis(),
                 "resource_type", "auto",
                 "transformation", new Transformation()
-                        .width(TARGET_WIDTH)
-                        .height(TARGET_HEIGHT)
-                        .crop("pad")
-                        .background("black")
+                        .width(TARGET_WIDTH).height(TARGET_HEIGHT)
+                        .crop("pad").background("black")
         ));
+        String publicId = (String) r.get("public_id");
 
-        String publicId = (String) uploadResult.get("public_id");
-
-        // Update car's thumbnail field
         car.setThumbnail(publicId);
         carRepository.save(car);
-
         return publicId;
+    }
+
+    // ============================================================
+    // BULK image management
+    // ============================================================
+    @Override
+    public Page<CarImageStatusDTO> findImageStatus(String filter, String q, Pageable pageable) {
+        String normalizedFilter = (filter == null || filter.isBlank()) ? "ALL" : filter.toUpperCase();
+        if (!normalizedFilter.equals("ALL") && !normalizedFilter.equals("MISSING") && !normalizedFilter.equals("COMPLETE")) {
+            throw new IllegalArgumentException("filter phải là một trong: ALL | MISSING | COMPLETE");
+        }
+        return carRepository.findImageStatus(normalizedFilter, q, pageable);
+    }
+
+    @Override
+    @Transactional
+    public String setThumbnailFromExistingImage(Integer carId, Integer imageId) {
+        Car car = carRepository.findById(carId)
+                .orElseThrow(() -> new IllegalArgumentException("Car not found with ID: " + carId));
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
+        if (image.getCar() == null || !image.getCar().getCarId().equals(carId)) {
+            throw new IllegalArgumentException("Ảnh " + imageId + " không thuộc xe " + carId);
+        }
+        car.setThumbnail(image.getUrl());
+        carRepository.save(car);
+        log.info("Set thumbnail for car={} from imageId={} (publicId={})", carId, imageId, image.getUrl());
+        return image.getUrl();
+    }
+
+    @Override
+    @Transactional
+    public void deleteImage(Integer carId, Integer imageId) {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
+        if (image.getCar() == null || !image.getCar().getCarId().equals(carId)) {
+            throw new IllegalArgumentException("Ảnh " + imageId + " không thuộc xe " + carId);
+        }
+        Car car = image.getCar();
+        String publicId = image.getUrl();
+
+        destroyOnCloudinary(publicId);
+        imageRepository.delete(image);
+
+        if (publicId != null && publicId.equals(car.getThumbnail())) {
+            car.setThumbnail(null);
+            carRepository.save(car);
+            log.info("Cleared thumbnail of car={} because deleted image was the active thumbnail", carId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public BulkDeleteImagesResponseDTO deleteImagesBulk(List<Integer> imageIds) {
+        List<Image> found = imageRepository.findAllById(imageIds);
+        Map<Integer, Image> foundById = new HashMap<>();
+        for (Image img : found) {
+            foundById.put(img.getImageId(), img);
+        }
+
+        List<Integer> notFound = new ArrayList<>();
+        List<Integer> deleted = new ArrayList<>();
+        List<Integer> clearedThumbnailCarIds = new ArrayList<>();
+
+        for (Integer id : imageIds) {
+            Image img = foundById.get(id);
+            if (img == null) {
+                notFound.add(id);
+                continue;
+            }
+            String publicId = img.getUrl();
+            destroyOnCloudinary(publicId);
+
+            Car car = img.getCar();
+            imageRepository.delete(img);
+            deleted.add(id);
+
+            if (car != null && publicId != null && publicId.equals(car.getThumbnail())) {
+                car.setThumbnail(null);
+                carRepository.save(car);
+                clearedThumbnailCarIds.add(car.getCarId());
+            }
+        }
+        log.info("Bulk delete images: requested={} deleted={} notFound={} thumbnailsCleared={}",
+                imageIds.size(), deleted.size(), notFound.size(), clearedThumbnailCarIds.size());
+        return new BulkDeleteImagesResponseDTO(deleted, notFound, clearedThumbnailCarIds);
+    }
+
+    // ============================================================
+    // Helpers
+    // ============================================================
+    private CarImagesResponseDTO toDto(Image image) {
+        CarImagesResponseDTO dto = new CarImagesResponseDTO();
+        dto.setImageId(image.getImageId());
+        dto.setUrl(image.getUrl());
+        dto.setFileHash(image.getFileHash());
+        dto.setCarId(image.getCar() != null ? image.getCar().getCarId() : null);
+        return dto;
+    }
+
+    private void validateImageFile(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File ảnh không được để trống");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("Kích thước file vượt quá 20MB: " + file.getOriginalFilename());
+        }
+        if (!ALLOWED_TYPES.contains(file.getContentType())) {
+            throw new IllegalArgumentException("Chỉ chấp nhận ảnh JPEG/PNG/GIF: " + file.getOriginalFilename());
+        }
+        BufferedImage check = ImageIO.read(new ByteArrayInputStream(file.getBytes()));
+        if (check == null) {
+            throw new IllegalArgumentException("File không phải ảnh hợp lệ: " + file.getOriginalFilename());
+        }
+    }
+
+    private String computeMd5(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("MD5").digest(bytes);
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("MD5 not available on this JVM", e);
+        }
+    }
+
+    private void destroyOnCloudinary(String publicId) {
+        if (publicId == null || publicId.isBlank()) return;
+        try {
+            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("invalidate", true));
+        } catch (Exception e) {
+            // Don't fail the DB delete if Cloudinary cleanup fails — log and move on.
+            log.warn("Cloudinary destroy failed for publicId={}: {}", publicId, e.getMessage());
+        }
     }
 }

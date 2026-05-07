@@ -69,7 +69,12 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         // 4. Map to entity
         SalesOrder order = salesOrderMapper.toEntity(request);
         order.setInventoryCar(car);
-        
+        // Gán showroom theo xe để Hibernate tenant filter tìm thấy đơn hàng này khi sales
+        // của showroom đó truy vấn (báo cáo doanh thu, danh sách đơn theo chi nhánh).
+        if (car.getShowroom() != null) {
+            order.setShowroom(car.getShowroom());
+        }
+
         // 5. Set relationships if provided
         if (request.getSalesStaffId() != null) {
             User salesStaff = userRepository.findById(request.getSalesStaffId())
@@ -199,14 +204,19 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         if (order.getOrderStatus() == OrderStatus.COMPLETED) {
             throw new BusinessException("Không thể hủy đơn hàng đã hoàn tất");
         }
-        
+
         if (order.getOrderStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException("Đơn hàng đã bị hủy trước đó");
         }
-        
+
+        // Đảm bảo cancel đi qua đúng state machine: chặn các state đã giao (PAID,
+        // PREPARING_DELIVERY, DELIVERED). Trạng thái này phải hủy qua quy trình hoàn tiền
+        // (REFUND_PROCESSING) chứ không cancel trực tiếp.
+        validateStatusTransition(order, OrderStatus.CANCELLED);
+
         // Log status change before updating
         OrderStatus oldStatus = order.getOrderStatus();
-        
+
         // Update order
         order.setOrderStatus(OrderStatus.CANCELLED);
         order.setCancellationReason(reason);

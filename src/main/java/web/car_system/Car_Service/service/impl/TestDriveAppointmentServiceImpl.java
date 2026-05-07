@@ -45,6 +45,11 @@ public class TestDriveAppointmentServiceImpl implements TestDriveAppointmentServ
 
         // Bước 3: Gán các đối tượng quan hệ và giá trị mặc định
         newAppointment.setCar(car);
+        // Gán showroom theo xe để Hibernate tenant filter tìm thấy lịch hẹn này khi sales
+        // của showroom đó truy vấn.
+        if (car.getShowroom() != null) {
+            newAppointment.setShowroom(car.getShowroom());
+        }
         // Trạng thái PENDING_CONFIRMATION và createdAt sẽ được tự động set bởi @PrePersist
 
         // Bước 4: Lưu vào DB

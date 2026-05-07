@@ -17,9 +17,14 @@ import java.util.List;
 @Configuration
 public class OpenAPIConfig {
     
-    @Value("${api.url:http://localhost:8080/api/v1}")
-    private String apiUrl;
-    
+    /**
+     * Base URL cho Swagger server — KHÔNG kèm "/api/v1" vì Endpoint constants
+     * (vd Endpoint.V1.AI_ADVISOR.CHAT = "/api/v1/ai-advisor/chat") đã chứa prefix sẵn.
+     * Nếu để cả 2 đều có prefix, Swagger sẽ build URL kép kiểu /api/v1/api/v1/...
+     */
+    @Value("${api.swagger-base-url:http://localhost:8080}")
+    private String swaggerBaseUrl;
+
     @Bean
     public OpenAPI carServiceOpenAPI() {
         return new OpenAPI()
@@ -53,11 +58,8 @@ public class OpenAPIConfig {
                     .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
             .servers(List.of(
                 new Server()
-                    .url(apiUrl)
-                    .description("API Server"),
-                new Server()
-                    .url("http://localhost:8080/api/v1")
-                    .description("Local Development")
+                    .url(swaggerBaseUrl)
+                    .description("Local Development (root, no prefix)")
             ))
             // Security can use EITHER Cookie OR Bearer token
             .addSecurityItem(new SecurityRequirement()

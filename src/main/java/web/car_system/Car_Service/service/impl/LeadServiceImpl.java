@@ -36,11 +36,15 @@ public class LeadServiceImpl implements LeadService {
     public LeadDto createLead(CreateLeadRequest request) {
         Lead newLead = leadMapper.toEntity(request);
 
-        // Xử lý gán xe (nếu có)
+        // Xử lý gán xe (nếu có) — đồng thời gán showroom theo xe để Hibernate tenant filter
+        // tìm thấy lead này khi sales của showroom đó truy vấn.
         if (request.getInventoryCarId() != null) {
             InventoryCar car = inventoryCarRepository.findById(request.getInventoryCarId())
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy xe với ID: " + request.getInventoryCarId()));
             newLead.setInterestedCar(car);
+            if (car.getShowroom() != null) {
+                newLead.setShowroom(car.getShowroom());
+            }
         }
         newLead.setLeadStatus(LeadStatus.NEW);
         // Lưu và chuyển đổi sang DTO để trả về

@@ -20,7 +20,6 @@ import web.car_system.Car_Service.domain.dto.image.CarImagesResponseDTO;
 import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostDto;
 import web.car_system.Car_Service.domain.dto.regional_fee.RollingCostRequest;
 import web.car_system.Car_Service.domain.entity.Attribute;
-import web.car_system.Car_Service.domain.entity.Image;
 import web.car_system.Car_Service.domain.entity.Specification;
 import web.car_system.Car_Service.service.*;
 import web.car_system.Car_Service.service.impl.CarServiceImpl;
@@ -314,11 +313,11 @@ public class CarController {
     }
 
     @PostMapping(Endpoint.V1.CAR.CAR_ID_IMAGES)
-    public ResponseEntity<List<Image>> uploadImages(@PathVariable Integer carId,
-                                                    @RequestParam("files") MultipartFile[] files)
-            throws IOException, IllegalArgumentException {
-        List<Image> images = imageService.uploadImages(carId, files);
-        return ResponseEntity.status(HttpStatus.CREATED).body(images);
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<CarImagesResponseDTO>>> uploadImages(
+            @PathVariable Integer carId,
+            @RequestParam("files") MultipartFile[] files) throws IOException {
+        List<CarImagesResponseDTO> images = imageService.uploadImages(carId, files);
+        return success(images, "Upload " + images.size() + " ảnh thành công", HttpStatus.CREATED);
     }
 
     @GetMapping(Endpoint.V1.CAR.CAR_ID_IMAGES)

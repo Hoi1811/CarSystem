@@ -67,6 +67,13 @@ public class Endpoint {
             public static final String CHANGE_CAR_STATUS = CAR + "/{carId}/status";
 
             public static final String CALCULATE_ROLLING_COST = CAR_ID + "/calculate-rolling-cost"; // POST /api/v1/cars/{id}/calculate-rolling-cost
+
+            // === BULK IMAGE MANAGEMENT (admin) ===
+            public static final String ADMIN_CAR_PREFIX = PREFIX + "/admin/cars";
+            public static final String ADMIN_CAR_IMAGE_STATUS = ADMIN_CAR_PREFIX + "/image-status";
+            public static final String ADMIN_CAR_THUMBNAIL_FROM_IMAGE = ADMIN_CAR_PREFIX + "/{carId}/thumbnail/from-image/{imageId}";
+            public static final String ADMIN_CAR_DELETE_IMAGE = ADMIN_CAR_PREFIX + "/{carId}/images/{imageId}";
+            public static final String ADMIN_CAR_BULK_DELETE_IMAGES = ADMIN_CAR_PREFIX + "/images/bulk-delete";
         }
         public static final class ATTRIBUTE {
             public static final String ATTRIBUTE_PREFIX = PREFIX + "/attributes";
@@ -106,6 +113,16 @@ public class Endpoint {
         public static final class AI {
             public static final String PREFIX = V1.PREFIX + "/ai";
             public static final String SUGGEST = PREFIX + "/suggest";
+        }
+        public static final class AI_ADVISOR {
+            public static final String PREFIX = V1.PREFIX + "/ai-advisor";
+            public static final String CHAT = PREFIX + "/chat";
+            public static final String SEARCH = PREFIX + "/search";
+            public static final String BREAKDOWN = PREFIX + "/breakdown";
+            public static final String ADMIN_REGENERATE = PREFIX + "/admin/regenerate";
+            public static final String ADMIN_RELOAD_CACHE = PREFIX + "/admin/reload-cache";
+            public static final String ADMIN_EMBED_CAR = PREFIX + "/admin/embed/{carId}";
+            public static final String ADMIN_STATUS = PREFIX + "/admin/status";
         }
         public static final class ROLE {
             public static final String ROLE = PREFIX + "/roles";

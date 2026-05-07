@@ -39,6 +39,43 @@ public interface CarRepository extends JpaRepository<Car, Integer>, JpaSpecifica
     @Query("SELECT c FROM Car c WHERE c.approvalStatus = :status")
     Page<Car> findByApprovalStatus(@Param("status") web.car_system.Car_Service.domain.entity.CarStatus status, Pageable pageable);
 
+    @Query(value = """
+            SELECT new web.car_system.Car_Service.domain.dto.image.CarImageStatusDTO(
+                c.carId, c.name, c.model, c.year,
+                m.name, c.thumbnail,
+                (SELECT COUNT(i) FROM Image i WHERE i.car = c)
+            )
+            FROM Car c LEFT JOIN c.manufacturer m
+            WHERE (:q IS NULL OR :q = ''
+                    OR LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%'))
+                    OR LOWER(c.model) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (
+                :filter = 'ALL'
+                OR (:filter = 'MISSING' AND (c.thumbnail IS NULL OR c.thumbnail = ''
+                    OR NOT EXISTS (SELECT 1 FROM Image i WHERE i.car = c)))
+                OR (:filter = 'COMPLETE' AND c.thumbnail IS NOT NULL AND c.thumbnail <> ''
+                    AND EXISTS (SELECT 1 FROM Image i WHERE i.car = c))
+              )
+            """,
+            countQuery = """
+            SELECT COUNT(c)
+            FROM Car c
+            WHERE (:q IS NULL OR :q = ''
+                    OR LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%'))
+                    OR LOWER(c.model) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (
+                :filter = 'ALL'
+                OR (:filter = 'MISSING' AND (c.thumbnail IS NULL OR c.thumbnail = ''
+                    OR NOT EXISTS (SELECT 1 FROM Image i WHERE i.car = c)))
+                OR (:filter = 'COMPLETE' AND c.thumbnail IS NOT NULL AND c.thumbnail <> ''
+                    AND EXISTS (SELECT 1 FROM Image i WHERE i.car = c))
+              )
+            """)
+    Page<web.car_system.Car_Service.domain.dto.image.CarImageStatusDTO> findImageStatus(
+            @Param("filter") String filter,
+            @Param("q") String q,
+            Pageable pageable);
+
     List<Car> findAllByName(String name);
 
     @Query(value = "SELECT DISTINCT car_id AS value, " +

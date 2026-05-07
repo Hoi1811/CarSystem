@@ -2,6 +2,7 @@ package web.car_system.Car_Service.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import web.car_system.Car_Service.annotation.RestApiV1;
 import web.car_system.Car_Service.domain.entity.CarStatus;
@@ -9,6 +10,7 @@ import web.car_system.Car_Service.service.CarService;
 
 @RestApiV1
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
 public class CarApprovalController {
 
     private final CarService carService;

@@ -59,6 +59,15 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.CAR.CAR_PAGINATED).permitAll() // Sửa từ POST thành cho mọi method nếu cần
                         .requestMatchers(Endpoint.V1.CAR.FIND_RELATED_CARS_BY_NAME).permitAll()
                         .requestMatchers(Endpoint.V1.CHATBOT.CHAT).permitAll()
+                        // AI Advisor (RAG): public chat/search/breakdown
+                        .requestMatchers(POST, Endpoint.V1.AI_ADVISOR.CHAT).permitAll()
+                        .requestMatchers(POST, Endpoint.V1.AI_ADVISOR.SEARCH).permitAll()
+                        .requestMatchers(POST, Endpoint.V1.AI_ADVISOR.BREAKDOWN).permitAll()
+                        // TODO: hardening trước khi prod — đổi 4 endpoint dưới sang hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(POST, Endpoint.V1.AI_ADVISOR.ADMIN_REGENERATE).permitAll()
+                        .requestMatchers(POST, Endpoint.V1.AI_ADVISOR.ADMIN_RELOAD_CACHE).permitAll()
+                        .requestMatchers(POST, Endpoint.V1.AI_ADVISOR.ADMIN_EMBED_CAR).permitAll()
+                        .requestMatchers(GET, Endpoint.V1.AI_ADVISOR.ADMIN_STATUS).permitAll()
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_ALL_AVAILABLE).permitAll()
                         .requestMatchers(Endpoint.V1.INVENTORY_CAR.GET_DETAILS_BY_ID).permitAll()
                         .requestMatchers(Endpoint.V1.RECOMMENDATION.GET_SUGGESTIONS).permitAll()

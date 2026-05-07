@@ -186,6 +186,27 @@
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-envers</artifactId>
 		</dependency>
+
+		<!-- ===== DJL (Deep Java Library) – Local Embedding ===== -->
+		<!-- Chạy sentence-transformers ngay trong JVM, không gọi API ngoài.
+		     First boot tải model (~470MB) + PyTorch native libs (~150MB) về cache,
+		     các lần sau chạy offline. -->
+		<dependency>
+			<groupId>ai.djl</groupId>
+			<artifactId>api</artifactId>
+			<version>0.30.0</version>
+		</dependency>
+		<dependency>
+			<groupId>ai.djl.huggingface</groupId>
+			<artifactId>tokenizers</artifactId>
+			<version>0.30.0</version>
+		</dependency>
+		<dependency>
+			<groupId>ai.djl.pytorch</groupId>
+			<artifactId>pytorch-engine</artifactId>
+			<version>0.30.0</version>
+			<scope>runtime</scope>
+		</dependency>
 	</dependencies>
 
 

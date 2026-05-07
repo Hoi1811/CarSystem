@@ -104,7 +104,7 @@ public class JwtFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
 
             // Trả về lỗi 401 Unauthorized để Client biết token không hợp lệ
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token: " + e.getMessage());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
             return;
         }
 
