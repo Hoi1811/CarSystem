@@ -46,6 +46,7 @@ public class CarController {
     private final RegionalFeeService regionalFeeService;
     private final FileValidationUtil fileValidationUtil;
     private final web.car_system.Car_Service.service.UserActivityLogService activityLogService;  // ✅ Track user behavior
+    private final PersonalizationService personalizationService;
 
     @PatchMapping(CHANGE_CAR_STATUS)
     public ResponseEntity<?> updateCarStatus(
@@ -273,6 +274,32 @@ public class CarController {
     public ResponseEntity<GlobalResponseDTO<?, ?>> getAllCarsPaginated(
             @RequestBody @Valid FilterCarPaginationRequestDTO filter) {
         return ResponseEntity.ok(carService.getAllCarsPaginated(filter));
+    }
+
+    @GetMapping(Endpoint.V1.CAR.CAR_RECENT_VIEWS)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<CarResponseDTO>>> getRecentViews(
+            @RequestParam(name = "limit", required = false, defaultValue = "8") Integer limit) {
+        Long userId = getCurrentUserId();
+        List<CarResponseDTO> data = personalizationService.getRecentViewedCars(userId, limit);
+        return success(data, "Lấy danh sách xe đã xem gần đây thành công");
+    }
+
+    @PostMapping(Endpoint.V1.CAR.CAR_MAYBE_INTERESTED)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<CarResponseDTO>>> getMaybeInterested(
+            @RequestBody(required = false) MaybeInterestedRequestDTO request) {
+        Long userId = getCurrentUserId();
+        List<Integer> seedIds = request != null ? request.seedCarIds() : null;
+        int limit = request != null && request.limit() != null ? request.limit() : 8;
+        List<CarResponseDTO> data = personalizationService.getMaybeInterestedCars(userId, seedIds, limit);
+        return success(data, "Lấy danh sách xe có thể bạn quan tâm thành công");
+    }
+
+    @PostMapping(Endpoint.V1.CAR.CAR_BY_IDS)
+    public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, List<CarResponseDTO>>> getCarsByIds(
+            @Valid @RequestBody CarsByIdsRequestDTO request) {
+        int limit = request.limit() != null ? request.limit() : request.ids().size();
+        List<CarResponseDTO> data = personalizationService.getCarsByIds(request.ids(), limit);
+        return success(data, "Lấy danh sách xe theo ID thành công");
     }
 
     @PutMapping(value = Endpoint.V1.CAR.CAR_ID, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

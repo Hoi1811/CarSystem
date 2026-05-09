@@ -41,14 +41,11 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
             .orElseThrow(() -> new EntityNotFoundException(
                 "Không tìm thấy đơn hàng với ID: " + orderId));
         
-        // 2. Validate order state
-        if (order.getOrderStatus() == OrderStatus.COMPLETED) {
-            throw new BusinessException("Không thể thêm thanh toán cho đơn hàng đã hoàn tất");
+        // 2. Validate order status vs payment type (happy-path invariant)
+        if (!isPaymentAllowed(order.getOrderStatus(), request.getPaymentType())) {
+            throw new BusinessException(buildBlockedMessage(order.getOrderStatus(), request.getPaymentType()));
         }
-        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
-            throw new BusinessException("Không thể thêm thanh toán cho đơn hàng đã hủy");
-        }
-        
+
         // 3. Validate payment amount
         validatePaymentAmount(order, request);
         
@@ -110,7 +107,31 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     }
     
     // ===== PRIVATE HELPER METHODS =====
-    
+
+    /**
+     * Happy-path rule: each PaymentType is only allowed for a specific set of order statuses.
+     * REFUND is reserved for the cancellation flow (REFUND_PROCESSING) and is rejected during
+     * the normal sale lifecycle.
+     */
+    private boolean isPaymentAllowed(OrderStatus status, PaymentType type) {
+        return switch (type) {
+            case DEPOSIT -> status == OrderStatus.DRAFT || status == OrderStatus.PENDING_DEPOSIT;
+            case FINAL_PAYMENT -> status == OrderStatus.DEPOSIT_PAID || status == OrderStatus.PENDING_FINAL_PAYMENT;
+            case REFUND -> status == OrderStatus.REFUND_PROCESSING;
+        };
+    }
+
+    private String buildBlockedMessage(OrderStatus status, PaymentType type) {
+        String typeLabel = switch (type) {
+            case DEPOSIT -> "đặt cọc";
+            case FINAL_PAYMENT -> "thanh toán còn lại";
+            case REFUND -> "hoàn tiền";
+        };
+        return String.format(
+            "Không thể ghi nhận %s khi đơn đang ở trạng thái %s. Vui lòng kiểm tra lại trạng thái đơn hàng.",
+            typeLabel, status);
+    }
+
     /**
      * Validate payment amount based on type and order state
      */

@@ -41,6 +41,10 @@ public class Endpoint {
             public static final String FIND_RELATED_CAR_NAMES_BY_NAME = CAR + "/related-car-names";
             public static final String COMPARE_CARS = CAR + "/compare-cars";
             public static final String CAR_ID_SUGGESTIONS = CAR_ID + "/suggestions";
+            // Personalization (MVP)
+            public static final String CAR_RECENT_VIEWS = CAR + "/recent-views";        // GET (auth required)
+            public static final String CAR_MAYBE_INTERESTED = CAR + "/maybe-interested"; // POST (works for guest with seedCarIds)
+            public static final String CAR_BY_IDS = CAR + "/by-ids";                    // POST (public, used by guest recently-viewed)
             // Car Segment endpoints
             public static final String CAR_SEGMENT = PREFIX + "/car-segments";
             public static final String CAR_SEGMENT_ID = CAR_SEGMENT + "/{segmentId}";

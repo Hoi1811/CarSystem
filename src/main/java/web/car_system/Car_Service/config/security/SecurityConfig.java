@@ -57,6 +57,8 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.CAR.CAR_ID_SUGGESTIONS).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.COMPARE_CARS).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.CAR_PAGINATED).permitAll() // Sửa từ POST thành cho mọi method nếu cần
+                        .requestMatchers(POST, Endpoint.V1.CAR.CAR_MAYBE_INTERESTED).permitAll()
+                        .requestMatchers(POST, Endpoint.V1.CAR.CAR_BY_IDS).permitAll()
                         .requestMatchers(Endpoint.V1.CAR.FIND_RELATED_CARS_BY_NAME).permitAll()
                         .requestMatchers(Endpoint.V1.CHATBOT.CHAT).permitAll()
                         // AI Advisor (RAG): public chat/search/breakdown
@@ -119,13 +121,13 @@ public class SecurityConfig {
                         .requestMatchers(Endpoint.V1.ATTRIBUTE.ATTRIBUTE_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
                         // RECOMMENDATION RULES: Admin management
                         .requestMatchers(Endpoint.V1.RECOMMENDATION.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
-                        // LEAD + TEST DRIVE: Admin management
-                        .requestMatchers(Endpoint.V1.LEAD.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(Endpoint.V1.TEST_DRIVE.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
-                        // SALES ORDER: Admin management
-                        .requestMatchers(Endpoint.V1.SALES_ORDER.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
-                        // ANALYTICS: Admin only
-                        .requestMatchers(Endpoint.V1.ANALYTICS.ADMIN_PREFIX + "/**").hasAuthority("ROLE_ADMIN")
+                        // LEAD + TEST DRIVE: Sales operations — Admin / Manager / Staff
+                        .requestMatchers(Endpoint.V1.LEAD.ADMIN_PREFIX + "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER", "ROLE_STAFF")
+                        .requestMatchers(Endpoint.V1.TEST_DRIVE.ADMIN_PREFIX + "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER", "ROLE_STAFF")
+                        // SALES ORDER: Sales operations — Admin / Manager / Staff
+                        .requestMatchers(Endpoint.V1.SALES_ORDER.ADMIN_PREFIX + "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER", "ROLE_STAFF")
+                        // ANALYTICS: Reporting — Admin / Manager
+                        .requestMatchers(Endpoint.V1.ANALYTICS.ADMIN_PREFIX + "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
 
                         .requestMatchers(GET, Endpoint.V1.UTIL.GET_CONTROL_TYPES).hasAnyAuthority("ROLE_ADMIN")
                         //

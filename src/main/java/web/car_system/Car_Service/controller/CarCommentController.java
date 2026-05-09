@@ -111,7 +111,7 @@ public class CarCommentController {
     // 3. ADMIN APIs
     // ============================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN', 'MANAGER', 'STAFF')")
     @GetMapping("/admin/cars/comments")
     public ResponseEntity<GlobalResponseDTO<PaginatedMeta, List<CarCommentDto>>> getAllCommentsForAdmin(
             @RequestParam(required = false) CommentStatus status,
@@ -122,7 +122,7 @@ public class CarCommentController {
         return successPageable(result, "Lay danh sach binh luan thanh cong.");
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN', 'MANAGER', 'STAFF')")
     @PatchMapping("/admin/cars/comments/{commentId}/status")
     public ResponseEntity<GlobalResponseDTO<NoPaginatedMeta, Void>> updateCommentStatus(
             @PathVariable Long commentId,

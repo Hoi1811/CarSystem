@@ -1,5 +1,6 @@
 package web.car_system.Car_Service.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -55,4 +56,12 @@ public interface UserActivityLogRepository extends JpaRepository<UserActivityLog
            "AND l.car IS NOT NULL " +
            "ORDER BY l.sessionId, l.activityTimestamp")
     List<Object[]> findSessionCarPairs(@Param("since") LocalDateTime since);
+
+    @Query("SELECT l.car.carId FROM UserActivityLog l " +
+           "WHERE l.user.userId = :userId " +
+           "AND l.actionType = 'VIEW_CAR' " +
+           "AND l.car IS NOT NULL " +
+           "GROUP BY l.car.carId " +
+           "ORDER BY MAX(l.activityTimestamp) DESC")
+    List<Integer> findRecentViewedCarIds(@Param("userId") Long userId, Pageable pageable);
 }
