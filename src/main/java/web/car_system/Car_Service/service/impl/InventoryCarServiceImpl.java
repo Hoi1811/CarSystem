@@ -49,8 +49,15 @@ public class InventoryCarServiceImpl implements InventoryCarService {
         // Bước 2: Gán các đối tượng quan hệ thủ công
         newInventoryCar.setCar(carTemplate);
 
-        // Tự động gán showroom từ context người dùng đang đăng nhập (Multi-tenant)
-        newInventoryCar.setShowroom(resolveActiveShowroom());
+        // Gán showroom: ưu tiên giá trị từ request (admin chọn rõ), fallback context user.
+        Showroom targetShowroom;
+        if (request.getShowroomId() != null) {
+            targetShowroom = showroomRepository.findById(request.getShowroomId())
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy showroom với ID: " + request.getShowroomId()));
+        } else {
+            targetShowroom = resolveActiveShowroom();
+        }
+        newInventoryCar.setShowroom(targetShowroom);
 
         // Bước 3: Xử lý các giá trị mặc định (nếu có)
         if (newInventoryCar.getSaleStatus() == null) {
@@ -133,8 +140,18 @@ public class InventoryCarServiceImpl implements InventoryCarService {
         existingCar.setYearOfManufacture(request.getYearOfManufacture());
         existingCar.setNotes(request.getNotes());
 
-        // Giữ nguyên showroom hiện tại — không cho client thay đổi
-        // Showroom được quyết định bởi TenantFilterAspect, không phải từ request
+        // Cho phép admin đổi chi nhánh nếu request gửi showroomId khác.
+        // Nếu request không gửi (null) thì giữ nguyên showroom hiện tại.
+        if (request.getShowroomId() != null) {
+            Long currentShowroomId = existingCar.getShowroom() != null
+                    ? existingCar.getShowroom().getId()
+                    : null;
+            if (!request.getShowroomId().equals(currentShowroomId)) {
+                Showroom newShowroom = showroomRepository.findById(request.getShowroomId())
+                        .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy showroom với ID: " + request.getShowroomId()));
+                existingCar.setShowroom(newShowroom);
+            }
+        }
 
         // Bước 5: Spring Data JPA sẽ tự động lưu lại các thay đổi vào DB
         // khi transaction kết thúc, nên không cần gọi save() một cách tường minh.

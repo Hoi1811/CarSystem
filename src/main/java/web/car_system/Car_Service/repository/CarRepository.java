@@ -81,7 +81,8 @@ public interface CarRepository extends JpaRepository<Car, Integer>, JpaSpecifica
     @Query(value = "SELECT DISTINCT car_id AS value, " +
             "CONCAT(model, ' - ', price, ' đ') AS label " +
             "FROM cars " +
-            "WHERE LOWER(name) LIKE LOWER(CONCAT('%', :name, '%'))",
+            "WHERE deleted_at IS NULL " +
+            "AND LOWER(name) LIKE LOWER(CONCAT('%', :name, '%'))",
             nativeQuery = true)
     List<OptionProjection> findRelatedCarsByNameNative(@Param("name") String name);
 
@@ -89,14 +90,16 @@ public interface CarRepository extends JpaRepository<Car, Integer>, JpaSpecifica
             "SELECT DISTINCT model AS value, " +
             "CONCAT(model) AS label " +
             "FROM cars " +
-            "WHERE LOWER(name) LIKE LOWER(CONCAT('%', :name, '%'))",
+            "WHERE deleted_at IS NULL " +
+            "AND LOWER(name) LIKE LOWER(CONCAT('%', :name, '%'))",
             nativeQuery = true)
     List<OptionProjection> findRelatedModelsByCarName(String name);
     @Query(value =
             "SELECT MIN(car_id) AS value, " +
                     "name AS label " +
                     "FROM cars " +
-                    "WHERE LOWER(name) LIKE LOWER(CONCAT('%', :name, '%')) " +
+                    "WHERE deleted_at IS NULL " +
+                    "AND LOWER(name) LIKE LOWER(CONCAT('%', :name, '%')) " +
                     "GROUP BY name",
             nativeQuery = true)
     List<OptionProjection> findRelatedCarNamesByCarName(String name);

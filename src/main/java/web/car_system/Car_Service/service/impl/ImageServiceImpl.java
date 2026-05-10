@@ -22,19 +22,17 @@ import web.car_system.Car_Service.repository.CarRepository;
 import web.car_system.Car_Service.repository.ImageRepository;
 import web.car_system.Car_Service.service.ImageService;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +44,12 @@ public class ImageServiceImpl implements ImageService {
     private final Cloudinary cloudinary;
 
     private static final long MAX_FILE_SIZE = 20L * 1024 * 1024; // 20MB
-    private static final List<String> ALLOWED_TYPES = Arrays.asList("image/jpeg", "image/png", "image/gif");
+
+    private enum ImageFormat { JPEG, PNG, GIF, WEBP, AVIF, UNKNOWN }
+    private static final Set<ImageFormat> ALLOWED_FORMATS = EnumSet.of(
+            ImageFormat.JPEG, ImageFormat.PNG, ImageFormat.GIF,
+            ImageFormat.WEBP, ImageFormat.AVIF
+    );
     private static final int TARGET_WIDTH = 800;
     private static final int TARGET_HEIGHT = 600;
 
@@ -271,13 +274,49 @@ public class ImageServiceImpl implements ImageService {
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new IllegalArgumentException("Kích thước file vượt quá 20MB: " + file.getOriginalFilename());
         }
-        if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("Chỉ chấp nhận ảnh JPEG/PNG/GIF: " + file.getOriginalFilename());
+        ImageFormat format = detectImageFormat(file.getBytes());
+        if (!ALLOWED_FORMATS.contains(format)) {
+            throw new IllegalArgumentException(
+                    "File không phải ảnh hợp lệ (chỉ chấp nhận JPEG/PNG/GIF/WebP/AVIF): "
+                            + file.getOriginalFilename()
+            );
         }
-        BufferedImage check = ImageIO.read(new ByteArrayInputStream(file.getBytes()));
-        if (check == null) {
-            throw new IllegalArgumentException("File không phải ảnh hợp lệ: " + file.getOriginalFilename());
+    }
+
+    /**
+     * Nhận diện định dạng ảnh dựa trên magic bytes (file signature).
+     * Đáng tin cậy hơn ImageIO vì không phụ thuộc decoder, và bắt được trường hợp
+     * file bị đặt sai đuôi (ví dụ WebP đổi tên thành .jpeg).
+     */
+    private ImageFormat detectImageFormat(byte[] bytes) {
+        if (bytes == null || bytes.length < 12) return ImageFormat.UNKNOWN;
+
+        // JPEG: FF D8 FF
+        if ((bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8 && (bytes[2] & 0xFF) == 0xFF) {
+            return ImageFormat.JPEG;
         }
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if ((bytes[0] & 0xFF) == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G'
+                && (bytes[4] & 0xFF) == 0x0D && (bytes[5] & 0xFF) == 0x0A
+                && (bytes[6] & 0xFF) == 0x1A && (bytes[7] & 0xFF) == 0x0A) {
+            return ImageFormat.PNG;
+        }
+        // GIF: "GIF8"
+        if (bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == '8') {
+            return ImageFormat.GIF;
+        }
+        // WebP: "RIFF" ???? "WEBP"
+        if (bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') {
+            return ImageFormat.WEBP;
+        }
+        // AVIF: ???? "ftyp" "avif" hoặc "avis"
+        if (bytes[4] == 'f' && bytes[5] == 't' && bytes[6] == 'y' && bytes[7] == 'p'
+                && bytes[8] == 'a' && bytes[9] == 'v' && bytes[10] == 'i'
+                && (bytes[11] == 'f' || bytes[11] == 's')) {
+            return ImageFormat.AVIF;
+        }
+        return ImageFormat.UNKNOWN;
     }
 
     private String computeMd5(byte[] bytes) {

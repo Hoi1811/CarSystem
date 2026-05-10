@@ -34,4 +34,11 @@ public class CreateInventoryCarRequest {
 
     private Integer yearOfManufacture;
     private String notes;
+
+    /**
+     * Showroom mà admin muốn gán xe vào. Nếu null:
+     * - Staff/Manager: backend dùng showroom của user.
+     * - System Admin: backend đọc header X-Tenant-ID hoặc bỏ trống.
+     */
+    private Long showroomId;
 }
